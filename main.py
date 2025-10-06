@@ -45,7 +45,7 @@ planet_data = {
 def Loss_space(values,c,planet_data):
     d = planet_data[values[-1]]["max_distance_to_earth"]
     f = values[4]
-    loss_space = 20*np.log10((4*np.pi*d)/(c/f))
+    loss_space = 20*np.log10((4*np.pi*d)/(c/(f*10**9)))
     return loss_space
 
 def gain(values, eta_ant,c):
@@ -64,18 +64,19 @@ def submit():
         values.append(float(value))
     values.append(raw_values[-1].lower())
     print(values)
+    print(Loss_space(values,c,planet_data))
     return values
 
 root = tk.Tk()
 root.title("Enter Transmission Parameters")
-root.geometry("400x600")
+root.geometry("400x700")
 
 labels = [
     "Transmitter power (spacecraft) [W]",
     "Transmitter power (ground station) [W]",
     "Loss factor transmitter [dB]",
     "Loss factor receiver [dB]",
-    "Downlink frequency [Hz]",
+    "Downlink frequency [GHz]",
     "Turnaround ratio (uplink/downlink) [-]",
     "Antenna diameter (spacecraft) [m]",
     "Antenna diameter (ground station) [m]",
