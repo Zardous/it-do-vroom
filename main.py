@@ -59,10 +59,12 @@ def submit():
     raw_values = [entry.get() for entry in entries]
     values = []
     for value in raw_values[:-1]:
-        if value:
-            values.append(float(value))
-        values.append(raw_values[-1].lower)
-    return(values)
+        if not value:
+            value = 0.0
+        values.append(float(value))
+    values.append(raw_values[-1].lower())
+    print(values)
+    return values
 
 root = tk.Tk()
 root.title("Enter Transmission Parameters")
