@@ -62,6 +62,7 @@ def submit():
         if value:
             values.append(float(value))
         values.append(raw_values[-1].lower)
+    return(values)
 
 root = tk.Tk()
 root.title("Enter Transmission Parameters")
