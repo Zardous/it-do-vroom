@@ -18,7 +18,6 @@ def Loss_space(values,d,f,c):
     loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
 
-
 #GUI
 def submit():
     values = [float(entry.get()) for entry in entries]
@@ -38,7 +37,7 @@ labels = [
     "Antenna diameter (spacecraft) [m]",
     "Antenna diameter (ground station) [m]",
     "Orbit altitude [km]",
-    "GS Elevation angle [deg]",
+    "Elongation angle [deg]",
     "Pointing offset angle [deg]",
     "Required uplink data rate [bit/s]",
     "Payload swath width angle [deg]",
