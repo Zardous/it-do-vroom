@@ -9,12 +9,15 @@ import matplotlib.pyplot as plt
 
 #constants
 k_b = 1.381*10e-23
-
+c = 10**8
 
 #formulas
-def Loss_space(d,f,c):
-    Ls = 20*np.log10((4*np.pi*d)/(c/f))
-    return Ls
+def Loss_space(values,d,f,c):
+    d = values[8]
+    f = values[9]
+    loss_space = 20*np.log10((4*np.pi*d)/(c/f))
+    return loss_space
+
 
 #GUI
 def submit():
