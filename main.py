@@ -44,8 +44,10 @@ planet_data = {
 #formulas
 def loss_space(values,c,planet_data):
     if values[-1] == "earth":
-        l = np.arccos(planet_data["earth"]["mean_radius"]/(planet_data["earth"]["mean_radius"]+values[8]))
-        d = np.sin(l)*(planet_data["earth"]["mean_radius"]+values[8])
+        Re = planet_data["earth"]["mean_radius"]
+        h = values[8]*1000
+        l = np.arccos(Re/(Re+h))
+        d = np.sin(l)*(Re+h)
     else:
         d = planet_data[values[-1]]["min_distance_to_earth"]
     f = values[4]*10**9
