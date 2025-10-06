@@ -12,8 +12,7 @@ k_b = 1.381*10e-23
 c = 10**8
 eta_ant = 0.55
 
-# Planetary characteristics database (SI units)
-
+#planets data base
 planet_data = {
     "Mars": {
         "gravitational_parameter": 4.282837e13,       # m^3/s^2
@@ -33,7 +32,6 @@ planet_data = {
     }
 }
 
-
 #formulas
 def Loss_space(values,c):
     d = values[8]
@@ -44,10 +42,14 @@ def Loss_space(values,c):
 def gain(values, eta_ant,c):
     f = values[4]
     D = values[6]
+
     gain = np.log10(eta_ant*((np.pi*D)/(c/f))**2)
     return gain
 
+def Loss_transmitter(values):
+
 #GUI
+
 def submit():
     values = [float(entry.get()) for entry in entries]
     print(values)
