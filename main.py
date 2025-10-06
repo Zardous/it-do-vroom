@@ -26,12 +26,21 @@ planet_data = {
     "Venus": {
         "gravitational_parameter": 3.24859e14,        # m^3/s^2
         "mean_radius": 6.0518e6,                      # m
-        "orbital_period": 1.9414e7,                   # s (224.7 Earth days)
-        "rotation_period": -2.004e6,                  # s (retrograde, -243 Earth days)
-        "max_distance_to_earth": 2.57e11,             # m
-        "min_distance_to_earth": 4.14e10              # m
+        "orbital_period": 1.944e7,                    # s (224.7 Earth days)
+        "rotation_period": -2.004e6,                  # s (retrograde, −243.018 days)
+        "max_distance_to_earth": 2.58e11,             # m
+        "min_distance_to_earth": 4.2e7                # m
+    },
+    "Earth": {
+        "gravitational_parameter": 3.986004418e14,    # m^3/s^2
+        "mean_radius": 6.371e6,                       # m
+        "orbital_period": 3.15576e7,                  # s (365.25 days)
+        "rotation_period": 8.6164e4,                  # s (23.934 hours)
+        "max_distance_to_earth": 0.0,                 # m (reference body)
+        "min_distance_to_earth": 0.0                  # m
     }
 }
+
 
 
 #formulas
