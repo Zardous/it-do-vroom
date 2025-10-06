@@ -44,7 +44,8 @@ planet_data = {
 #formulas
 def loss_space(values,c,planet_data):
     if values[-1] == "earth":
-        d = planet_data['earth']['mean_radius'] + values[8]*10**3
+        l = np.arccos(planet_data["earth"]["mean_radius"]/(planet_data["earth"]["mean_radius"]+values[8]))
+        d = np.sin(l)*(planet_data["earth"]["mean_radius"]+values[8])
     else:
         d = planet_data[values[-1]]["min_distance_to_earth"]
     f = values[4]*10**9
@@ -89,6 +90,7 @@ def submit():
         values.append(float(value))
     values.append(raw_values[-1].lower())
     print(values)
+    print(loss_space(values,c,planet_data))
     return values
 
 root = tk.Tk()
