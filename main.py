@@ -15,7 +15,7 @@ eta_ant = 0.55
 # Planetary characteristics database (SI units)
 
 planet_data = {
-    "Mars": {
+    "mars": {
         "gravitational_parameter": 4.282837e13,       # m^3/s^2
         "mean_radius": 3.3895e6,                      # m
         "orbital_period": 5.935e7,                    # s (687 Earth days)
@@ -23,7 +23,7 @@ planet_data = {
         "max_distance_to_earth": 4.02e11,             # m
         "min_distance_to_earth": 5.46e10              # m
     },
-    "Venus": {
+    "venus": {
         "gravitational_parameter": 3.24859e14,        # m^3/s^2
         "mean_radius": 6.0518e6,                      # m
         "orbital_period": 1.944e7,                    # s (224.7 Earth days)
@@ -31,7 +31,7 @@ planet_data = {
         "max_distance_to_earth": 2.58e11,             # m
         "min_distance_to_earth": 4.2e7                # m
     },
-    "Earth": {
+    "earth": {
         "gravitational_parameter": 3.986004418e14,    # m^3/s^2
         "mean_radius": 6.371e6,                       # m
         "orbital_period": 3.15576e7,                  # s (365.25 days)
@@ -41,11 +41,9 @@ planet_data = {
     }
 }
 
-
-
 #formulas
-def Loss_space(values,c):
-    d = values[8]
+def Loss_space(values,c,planet_data):
+    d = planet_data[values[-1]]["max_distance_to_earth"]
     f = values[4]
     loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
@@ -58,8 +56,12 @@ def gain(values, eta_ant,c):
 
 #GUI
 def submit():
-    values = [float(entry.get()) for entry in entries]
-    print(values)
+    raw_values = [entry.get() for entry in entries]
+    values = []
+    for value in raw_values[:-1]:
+        if value:
+            values.append(float(value))
+        values.append(raw_values[-1].lower)
 
 root = tk.Tk()
 root.title("Enter Transmission Parameters")
@@ -98,3 +100,4 @@ submit_btn = tk.Button(root, text="Submit", command=submit)
 submit_btn.grid(row=len(labels), column=0, columnspan=2, pady=15)
 
 root.mainloop()
+
