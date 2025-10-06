@@ -43,7 +43,10 @@ planet_data = {
 
 #formulas
 def loss_space(values,c,planet_data):
-    d = planet_data[values[-1]]["max_distance_to_earth"]
+    if values[-1] == "earth":
+        d = planet_data['earth']['mean_radius'] + values[8]*10**3
+    else:
+        d = planet_data[values[-1]]["min_distance_to_earth"]
     f = values[4]*10**9
     loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
@@ -75,8 +78,6 @@ def eirp_sc(values, gain, loss_tx):
 def eirp_gs(values, gain, loss_tx):
     eirp_gs = 10*np.log10(values[1])+ gain_gs(values,eta_ant,c) - loss_tx(values)
     return eirp_gs
-
-
 
 #GUI
 def submit():
