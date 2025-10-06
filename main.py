@@ -18,7 +18,7 @@ def Loss_space(d,f,c):
 
 #GUI
 def submit():
-    values = [entry.get() for entry in entries]
+    values = [float(entry.get()) for entry in entries]
     print(values)
 
 root = tk.Tk()
