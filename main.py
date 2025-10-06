@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 #constants
 k_b = 1.381*10e-23
-c = 10**8
+c = 3*10**8
 eta_ant = 0.55
 
 # Planetary characteristics database (SI units)
@@ -44,14 +44,14 @@ planet_data = {
 #formulas
 def Loss_space(values,c,planet_data):
     d = planet_data[values[-1]]["max_distance_to_earth"]
-    f = values[4]
-    loss_space = 20*np.log10((4*np.pi*d)/(c/(f*10**9)))
+    f = values[4]*10**9
+    loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
 
 def gain(values, eta_ant,c):
-    f = values[4]
+    f = values[4]*10**9
     D = values[6]
-    gain = np.log10(eta_ant*((np.pi*D)/(c/f))**2)
+    gain = 10*np.log10(eta_ant*((np.pi*D)/(c/f))**2)
     return gain
 
 #GUI
@@ -65,6 +65,7 @@ def submit():
     values.append(raw_values[-1].lower())
     print(values)
     print(Loss_space(values,c,planet_data))
+    print(gain(values,eta_ant,c))
     return values
 
 root = tk.Tk()
