@@ -42,17 +42,41 @@ planet_data = {
 }
 
 #formulas
-def Loss_space(values,c,planet_data):
+def loss_space(values,c,planet_data):
     d = planet_data[values[-1]]["max_distance_to_earth"]
     f = values[4]*10**9
     loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
 
-def gain(values, eta_ant,c):
+def gain_sc(values, eta_ant,c):
     f = values[4]*10**9
     D = values[6]
-    gain = 10*np.log10(eta_ant*((np.pi*D)/(c/f))**2)
-    return gain
+    gain_sc = 10*np.log10(eta_ant*((np.pi*D)/(c/f))**2)
+    return gain_sc
+
+def gain_gs(values, eta_ant,c):
+    f = values[4]*10**9
+    D = values[7]
+    gain_gs = 10 * np.log10(eta_ant*((np.pi*D)/(c/f))**2)
+    return gain_gs
+
+def loss_tx(values):
+    loss_tx = 10*np.log10(values[2])
+    return loss_tx
+
+def loss_rx(values):
+    loss_rx = 10*np.log10(values[3])
+    return loss_rx
+
+def eirp_sc(values, gain, loss_tx):
+    eirp_sc = 10*np.log10(values[0])+ gain_sc(values,eta_ant,c) - loss_tx(values)
+    return eirp_sc
+
+def eirp_gs(values, gain, loss_tx):
+    eirp_gs = 10*np.log10(values[1])+ gain_gs(values,eta_ant,c) - loss_tx(values)
+    return eirp_gs
+
+
 
 #GUI
 def submit():
@@ -64,8 +88,8 @@ def submit():
         values.append(float(value))
     values.append(raw_values[-1].lower())
     print(values)
-    print(Loss_space(values,c,planet_data))
-    print(gain(values,eta_ant,c))
+    print(loss_space(values,c,planet_data))
+    print(gain_sc(values,eta_ant,c))
     return values
 
 root = tk.Tk()
@@ -75,8 +99,8 @@ root.geometry("400x700")
 labels = [
     "Transmitter power (spacecraft) [W]",
     "Transmitter power (ground station) [W]",
-    "Loss factor transmitter [dB]",
-    "Loss factor receiver [dB]",
+    "Loss factor transmitter [-]",
+    "Loss factor receiver [-]",
     "Downlink frequency [GHz]",
     "Turnaround ratio (uplink/downlink) [-]",
     "Antenna diameter (spacecraft) [m]",
