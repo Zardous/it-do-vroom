@@ -89,8 +89,6 @@ def submit():
         values.append(float(value))
     values.append(raw_values[-1].lower())
     print(values)
-    print(loss_space(values,c,planet_data))
-    print(gain_sc(values,eta_ant,c))
     return values
 
 root = tk.Tk()
