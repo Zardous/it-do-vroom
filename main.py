@@ -9,6 +9,7 @@ from tempcharlotte import downlinkdatarate
 # Goal: use the link equation in decibel form so Eb/No = sum of all gains and losses
 # for each configuration calculate the margin
 # note: all losses are maximal losses based on the worst expected conditions
+#Assumptions: T0=290K
 
 #constants
 k_b = 1.381*10e-23
@@ -82,9 +83,9 @@ def eirp(values,f,D,c,eta_ant):
     eirp = 10*np.log10(values[0])+ gain - loss_tx
     return eirp
 def g_over_t(values,f,D,c,eta_ant):
-    loss_rx = 10 * np.log10(values[3])
+    T_sys = 10 * np.log10(290*(1-values[3]))
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
-    g_over_t = gain - loss_rx
+    g_over_t = gain - T_sys
     return g_over_t
 def loss_atm(f,min_elev):
     #linear approximation of SMAD 3rd edition book p565
