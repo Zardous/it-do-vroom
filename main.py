@@ -6,11 +6,13 @@ import matplotlib.pyplot as plt
 
 # Goal: use the link equation in decibel form so Eb/No = sum of all gains and losses
 # for each configuration calculate the margin
+# note: all losses are maximal losses based on the worst expected conditions
 
 #constants
 k_b = 1.381*10e-23
 c = 3*10**8
 eta_ant = 0.55
+min_elev = 10* np.pi / 180 #rad
 
 # Planetary characteristics database (SI units)
 
@@ -42,12 +44,15 @@ planet_data = {
 }
 
 #formulas
-def loss_space(values,c,planet_data):
+def loss_space(values,c,planet_data,min_elev):
+    #procedure taken from SMAD 3rd edition page 113
     if values[-1] == "earth":
-        Re = planet_data["earth"]["mean_radius"]
+        Re = planet_data["earth"]['mean_radius']
         h = values[8]*1000
-        l = np.arccos(Re/(Re+h))
-        d = np.sin(l)*(Re+h)
+        sin_rho = Re/(Re+h)
+        eta = np.arcsin(sin_rho*np.cos(min_elev))
+        l = np.pi/2 - min_elev - eta
+        d = Re*(np.sin(l)/np.sin(eta))
     else:
         d = planet_data[values[-1]]["min_distance_to_earth"]
     f = values[4]*10**9
@@ -74,13 +79,24 @@ def loss_rx(values):
     loss_rx = 10*np.log10(values[3])
     return loss_rx
 
-def eirp_sc(values, gain, loss_tx):
+def eirp_sc(values, gain_sc, loss_tx):
     eirp_sc = 10*np.log10(values[0])+ gain_sc(values,eta_ant,c) - loss_tx(values)
     return eirp_sc
 
-def eirp_gs(values, gain, loss_tx):
+def eirp_gs(values, gain_gs, loss_tx):
     eirp_gs = 10*np.log10(values[1])+ gain_gs(values,eta_ant,c) - loss_tx(values)
     return eirp_gs
+
+def f_uplink(values):
+    f_uplink = values[4]*values[5]
+    return f_uplink
+
+def loss_atm(values,f_uplink,min_elev):
+    #linear approximation of SMAD 3rd edition book p565
+    f_downlink = values[4]
+    loss_atm_downlink = 0.04+0.002*f_downlink/np.sin(min_elev)
+    loss_atm_uplink = 0.04+0.002*f_uplink/np.sin(min_elev)
+    return loss_atm_downlink, loss_atm_uplink
 
 #GUI
 def submit():
@@ -92,7 +108,7 @@ def submit():
         values.append(float(value))
     values.append(raw_values[-1].lower())
     print(values)
-    print(loss_space(values,c,planet_data))
+    print(f_uplink(values))
     return values
 
 root = tk.Tk()
@@ -100,24 +116,24 @@ root.title("Enter Transmission Parameters")
 root.geometry("400x700")
 
 labels = [
-    "Transmitter power (spacecraft) [W]",
-    "Transmitter power (ground station) [W]",
-    "Loss factor transmitter [-]",
-    "Loss factor receiver [-]",
-    "Downlink frequency [GHz]",
-    "Turnaround ratio (uplink/downlink) [-]",
-    "Antenna diameter (spacecraft) [m]",
-    "Antenna diameter (ground station) [m]",
-    "Orbit altitude [km]",
-    "Elongation angle [deg]",
-    "Pointing offset angle [deg]",
-    "Required uplink data rate [bit/s]",
-    "Payload swath width angle [deg]",
-    "Payload pixel size [m]",
-    "Payload bits per pixel [bit]",
-    "Payload duty cycle [%]",
-    "Required data rate [bit/s]",
-    "Planet"
+    "0. Transmitter power (spacecraft) [W]",
+    "1. Transmitter power (ground station) [W]",
+    "2. Loss factor transmitter [-]",
+    "3. Loss factor receiver [-]",
+    "4. Downlink frequency [GHz]",
+    "5. Turnaround ratio (uplink/downlink) [-]",
+    "6. Antenna diameter (spacecraft) [m]",
+    "7. Antenna diameter (ground station) [m]",
+    "8. Orbit altitude [km]",
+    "9. Elongation angle [deg]",
+    "10. Pointing offset angle [deg]",
+    "11. Required uplink data rate [bit/s]",
+    "12. Payload swath width angle [deg]",
+    "13. Payload pixel size [m]",
+    "14. Payload bits per pixel [bit]",
+    "15. Payload duty cycle [%]",
+    "16. Required data rate [bit/s]",
+    "17. Planet"
 ]
 
 entries = []
