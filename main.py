@@ -4,6 +4,8 @@ from traceback import print_tb
 import numpy as np
 import matplotlib.pyplot as plt
 
+from tempcharlotte import downlinkdatarate
+
 # Goal: use the link equation in decibel form so Eb/No = sum of all gains and losses
 # for each configuration calculate the margin
 # note: all losses are maximal losses based on the worst expected conditions
@@ -13,6 +15,7 @@ k_b = 1.381*10e-23
 c = 3*10**8
 eta_ant = 0.55
 min_elev = 10* np.pi / 180 #rad
+EbNo_req = 10.5 #[dB], value comes from BPSK modulation for BER of 10e-6, from ADSEE lecture 4
 
 # Planetary characteristics database (SI units)
 
@@ -40,11 +43,19 @@ planet_data = {
         "rotation_period": 8.6164e4,                  # s (23.934 hours)
         "max_distance_to_earth": 0.0,                 # m (reference body)
         "min_distance_to_earth": 0.0                  # m
+    },
+    "moon": {
+        "gravitational_parameter": 4.9048695e12,      # m^3/s^2
+        "mean_radius": 1.7374e6,                      # m
+        "orbital_period": 2.3606e6,                   # s (27.3 Earth days)
+        "rotation_period": 2.3606e6,                  # s (synchronous rotation)
+        "max_distance_to_earth": 4.07e8,              # m
+        "min_distance_to_earth": 3.63e8               # m
     }
 }
 
 #formulas
-def loss_space(values,c,planet_data,min_elev):
+def loss_space(values,f,c,planet_data,min_elev):
     #procedure taken from SMAD 3rd edition page 113
     if values[-1] == "earth":
         Re = planet_data["earth"]['mean_radius']
@@ -55,48 +66,60 @@ def loss_space(values,c,planet_data,min_elev):
         d = Re*(np.sin(l)/np.sin(eta))
     else:
         d = planet_data[values[-1]]["min_distance_to_earth"]
-    f = values[4]*10**9
     loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
-
-def gain_sc(values, eta_ant,c):
-    f = values[4]*10**9
-    D = values[6]
-    gain_sc = 10*np.log10(eta_ant*((np.pi*D)/(c/f))**2)
-    return gain_sc
-
-def gain_gs(values, eta_ant,c):
-    f = values[4]*10**9
-    D = values[7]
-    gain_gs = 10 * np.log10(eta_ant*((np.pi*D)/(c/f))**2)
-    return gain_gs
-
-def loss_tx(values):
-    loss_tx = 10*np.log10(values[2])
-    return loss_tx
-
-def loss_rx(values):
-    loss_rx = 10*np.log10(values[3])
-    return loss_rx
-
-def eirp_sc(values, gain_sc, loss_tx):
-    eirp_sc = 10*np.log10(values[0])+ gain_sc(values,eta_ant,c) - loss_tx(values)
-    return eirp_sc
-
-def eirp_gs(values, gain_gs, loss_tx):
-    eirp_gs = 10*np.log10(values[1])+ gain_gs(values,eta_ant,c) - loss_tx(values)
-    return eirp_gs
-
-def f_uplink(values):
-    f_uplink = values[4]*values[5]
-    return f_uplink
-
-def loss_atm(values,f_uplink,min_elev):
+def eirp(values,f,D,c,eta_ant):
+    loss_tx = 10 * np.log10(values[2])
+    gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
+    eirp = 10*np.log10(values[0])+ gain - loss_tx
+    return eirp
+def g_over_t(values,f,D,c,eta_ant):
+    loss_rx = 10 * np.log10(values[3])
+    gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
+    g_over_t = gain - loss_rx
+    return g_over_t
+def loss_atm(f,min_elev):
     #linear approximation of SMAD 3rd edition book p565
-    f_downlink = values[4]
-    loss_atm_downlink = 0.04+0.002*f_downlink/np.sin(min_elev)
-    loss_atm_uplink = 0.04+0.002*f_uplink/np.sin(min_elev)
-    return loss_atm_downlink, loss_atm_uplink
+    f_GHz = f/(10**9)
+    loss_atm = 0.04+0.002*f_GHz/np.sin(min_elev)
+    return loss_atm
+def loss_pointing(values):
+    beamwidth = 21/(values[4]*values[6])
+    loss_pointing = 12*(values[10]/beamwidth)**2
+    return loss_pointing
+def bitrate_term_loss(datarate,k_b):
+    datarate = 10**8 #for testing purposes
+    bitrate_term_loss = 10*np.log10(datarate*k_b)
+    return bitrate_term_loss
+def link(values, eta_ant, c, k_b, min_elev):
+    f_downlink = values[4] * 10**9
+    f_uplink = values[4] * values[5] * 10**9
+
+    # Calculate each term individually
+    eirp_val = eirp(values, f_downlink, values[6], c, eta_ant)
+    g_over_t_val = g_over_t(values, f_downlink, values[7], c, eta_ant)
+    bitrate_loss_val = bitrate_term_loss(values[16], k_b)
+    space_loss_val = loss_space(values, f_downlink, c, planet_data, min_elev)
+    atm_loss_val = loss_atm(f_downlink, min_elev)
+    pointing_loss_val = loss_pointing(values)
+
+    # DEBUG
+    print(f"EIRP: {eirp_val:.2f} dB")
+    print(f"G/T: {g_over_t_val:.2f} dB/K")
+    print(f"Bitrate Term Loss: {bitrate_loss_val:.2f} dB")
+    print(f"Free-Space Path Loss: {space_loss_val:.2f} dB")
+    print(f"Atmospheric Loss: {atm_loss_val:.2f} dB")
+    print(f"Pointing Loss: {pointing_loss_val:.2f} dB")
+
+    EbNo_downlink = (
+        eirp_val
+        + g_over_t_val
+        - bitrate_loss_val
+        - space_loss_val
+        - atm_loss_val
+        - pointing_loss_val
+    )
+    return EbNo_downlink
 
 #GUI
 def submit():
@@ -107,8 +130,8 @@ def submit():
             value = 0.0
         values.append(float(value))
     values.append(raw_values[-1].lower())
-    print(values)
-    print(f_uplink(values))
+    print(f"Eb/No (Downlink): {link(values,eta_ant,c,k_b,min_elev):.2f} dB")
+    print(f"Margin :{link(values,eta_ant,c,k_b,min_elev)-values[16]:.2f} dB")
     return values
 
 root = tk.Tk()
@@ -132,7 +155,7 @@ labels = [
     "13. Payload pixel size [m]",
     "14. Payload bits per pixel [bit]",
     "15. Payload duty cycle [%]",
-    "16. Required data rate [bit/s]",
+    "16. Required Eb/no [-]",
     "17. Planet"
 ]
 
