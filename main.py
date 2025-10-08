@@ -51,6 +51,14 @@ planet_data = {
         "rotation_period": 2.3606e6,                  # s (synchronous rotation)
         "max_distance_to_earth": 4.07e8,              # m
         "min_distance_to_earth": 3.63e8               # m
+    },
+    "mercury": {
+            "gravitational_parameter": 2.2032e13,         # m^3/s^2
+            "mean_radius": 2.4397e6,                      # m
+            "orbital_period": 7.6005e6,                   # s (88 Earth days)
+            "rotation_period": 5.067e6,                   # s (58.646 Earth days)
+            "max_distance_to_earth": 2.22e11,             # m
+            "min_distance_to_earth": 7.7e10               # m
     }
 }
 
@@ -65,7 +73,7 @@ def loss_space(values,f,c,planet_data,min_elev):
         l = np.pi/2 - min_elev - eta
         d = Re*(np.sin(l)/np.sin(eta))
     else:
-        d = planet_data[values[-1]]["min_distance_to_earth"]
+        d = planet_data[values[-1]]["max_distance_to_earth"]
     loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
 def eirp(values,f,D,c,eta_ant):
@@ -155,7 +163,7 @@ labels = [
     "13. Payload pixel size [m]",
     "14. Payload bits per pixel [bit]",
     "15. Payload duty cycle [%]",
-    "16. Required Eb/no [-]",
+    "16. Required Eb/no [dB]",
     "17. Planet"
 ]
 
