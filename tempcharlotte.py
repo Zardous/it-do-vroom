@@ -7,8 +7,8 @@ def payloaddatarate(rad_planet, h_orbit, gravparam, swathwidth, pixelsize, bitsp
     datarate = pixelrate * bitsperpixel
     return datarate
 
-def downlinkdatarate(rad_planet, h_orbit, gravparam, payloaddatarate, dutycycle, downlinktime):
-    v_orb = math.sqrt(gravparam / (rad_planet + h_orbit))
-    T_orb = 2 * math.pi * (rad_planet + h_orbit) / v_orb
+def downlinkdatarate(payloaddatarate, dutycycle, downlinktime):
+    downlinkdatarate = 24 * 60 * 60 * dutycycle / 100 * payloaddatarate / (downlinktime * 60 * 60)
+    return downlinkdatarate
     
 
