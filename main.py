@@ -75,10 +75,10 @@ def loss_space(values,f,c,planet_data,min_elev):
         d = planet_data[values[-1]]["max_distance_to_earth"]
     loss_space = 20*np.log10((4*np.pi*d)/(c/f))
     return loss_space
-def eirp(values,f,D,c,eta_ant):
+def eirp(values,f,D,P,c,eta_ant):
     loss_tx = 10 * np.log10(values[2])
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
-    eirp = 10*np.log10(values[0])+ gain - loss_tx
+    eirp = 10*np.log10(P)+ gain - loss_tx
     return eirp
 def g_over_t(values,f,D,c,eta_ant):
     T_sys = 10 * np.log10(290*(1-values[3]))
@@ -95,57 +95,50 @@ def loss_pointing(values):
     loss_pointing = 12*(values[10]/beamwidth)**2
     return loss_pointing
 def bitrate_term_loss(datarate,k_b):
-    datarate = 10**8 #for testing purposes
     bitrate_term_loss = 10*np.log10(datarate*k_b)
     return bitrate_term_loss
-def link(values, eta_ant, c, k_b, min_elev):
-    f_downlink = values[4] * 10**9
-    f_uplink = values[4] * values[5] * 10**9
-
-    # Calculate each term individually
-    eirp_val = eirp(values, f_downlink, values[6], c, eta_ant)
-    g_over_t_val = g_over_t(values, f_downlink, values[7], c, eta_ant)
-    bitrate_loss_val = bitrate_term_loss(values[16], k_b)
-    space_loss_val = loss_space(values, f_downlink, c, planet_data, min_elev)
-    atm_loss_val = loss_atm(f_downlink, min_elev)
-    pointing_loss_val = loss_pointing(values)
-
-    # DEBUG
-    print(f"EIRP: {eirp_val:.2f} dB")
-    print(f"G/T: {g_over_t_val:.2f} dB/K")
-    print(f"Bitrate Term Loss: {bitrate_loss_val:.2f} dB")
-    print(f"Free-Space Path Loss: {space_loss_val:.2f} dB")
-    print(f"Atmospheric Loss: {atm_loss_val:.2f} dB")
-    print(f"Pointing Loss: {pointing_loss_val:.2f} dB")
-
-    EbNo_downlink = (
-        eirp_val
-        + g_over_t_val
-        - bitrate_loss_val
-        - space_loss_val
-        - atm_loss_val
-        - pointing_loss_val
-    )
-    return EbNo_downlink
-def payloaddatarate(values, planet_data):
+def downlinkdatarate(values, planet_data):
     rad_planet = planet_data[values[-1]]['mean_radius']
     h_orbit = values[8]
     gravparam = planet_data[values[-1]]['gravitational_parameter']
     swathwidth = values[12]
     pixelsize = values[13]
     bitsperpixel = values[14]
-
     v_orb = np.sqrt(gravparam / (rad_planet + h_orbit))
-    v_ground = v_orb * rad_planet / (rad_planet +h_orbit)
+    v_ground = v_orb * rad_planet / (rad_planet + h_orbit)
     swath_time = h_orbit * np.tan(pixelsize) / v_ground
     pixelsperswath = swathwidth / pixelsize
     pixelrate = pixelsperswath / swath_time
-    datarate = pixelrate * bitsperpixel
-    return datarate
-def downlinkdatarate(values, payloaddatarate, downlinktime):
+    payloaddatarate = pixelrate * bitsperpixel
+    downlinktime = values[17]
     dutycycle = values[15]
     downlinkdatarate = 24 * 60 * 60 * dutycycle / 100 * payloaddatarate / (downlinktime * 60 * 60)
     return downlinkdatarate
+def link(values, eta_ant, c, k_b, min_elev):
+
+    f_downlink = values[4] * 10**9
+    f_uplink = values[4] * values[5] * 10**9
+    uplink_datarate = values[11]*10**6
+    downlink_datarate_val = downlinkdatarate(values, planet_data)
+
+    EbNo_downlink = (
+        eirp(values, f_downlink, values[6],values[0], c, eta_ant)
+        + g_over_t(values, f_downlink, values[7], c, eta_ant)
+        - bitrate_term_loss(downlink_datarate_val, k_b)
+        - loss_space(values, f_downlink, c, planet_data, min_elev)
+        - loss_atm(f_downlink, min_elev)
+        - loss_pointing(values)
+    )
+    EbNo_uplink = (
+        eirp(values, f_uplink, values[7], values[1] , c, eta_ant)
+        + g_over_t(values, f_uplink, values[6], c, eta_ant)
+        - bitrate_term_loss(uplink_datarate, k_b)
+        - loss_space(values, f_uplink, c, planet_data, min_elev)
+        - loss_atm(f_uplink, min_elev)
+        - loss_pointing(values)
+    )
+
+    return EbNo_downlink, EbNo_uplink
 
 #GUI
 def submit():
@@ -156,14 +149,42 @@ def submit():
             value = 0.0
         values.append(float(value))
     values.append(raw_values[-1].lower())
-    print(f"Eb/No (Downlink): {link(values,eta_ant,c,k_b,min_elev):.2f} dB")
-    print(f"Margin :{link(values,eta_ant,c,k_b,min_elev)-values[16]:.2f} dB")
+
+    EbNo_downlink, EbNo_uplink = link(values, eta_ant, c, k_b, min_elev)
+    EbNo_required = values[17]
+    margin_downlink, margin_uplink = EbNo_downlink - EbNo_required, EbNo_uplink - EbNo_required
+
+    # Set color based on margin value
+    if margin_downlink < 0:
+        color_down = "red"
+    elif margin_downlink < 3:
+        color_down = "orange"
+    else:
+        color_down = "green"
+
+    if margin_uplink < 0:
+        color_up = "red"
+    elif margin_uplink < 3:
+        color_up = "orange"
+    else:
+        color_up = "green"
+
+    margin_label_down.config(
+        text=f"Downlink Margin: {margin_downlink:.2f} dB",
+        fg=color_down
+    )
+
+    margin_label_up.config(
+        text=f"Uplink Margin: {margin_uplink:.2f} dB",
+        fg=color_up
+    )
+
     return values
+
 
 root = tk.Tk()
 root.title("Enter Transmission Parameters")
-root.geometry("400x700")
-
+root.geometry("500x750")
 labels = [
     "0. Transmitter power (spacecraft) [W]",
     "1. Transmitter power (ground station) [W]",
@@ -176,25 +197,31 @@ labels = [
     "8. Orbit altitude [km]",
     "9. Elongation angle [deg]",
     "10. Pointing offset angle [deg]",
-    "11. Required uplink data rate [bit/s]",
+    "11. Required uplink data rate [Mbit/s]",
     "12. Payload swath width angle [deg]",
     "13. Payload pixel size [m]",
     "14. Payload bits per pixel [bit]",
     "15. Payload duty cycle [%]",
-    "16. Required Eb/no [dB]",
-    "17. Planet"
+    "16. Payload downlink time [hr]",
+    "17. Required Eb/No [dB]",
+    "18. Planet"
 ]
-
 entries = []
 for i, label_text in enumerate(labels):
     label = tk.Label(root, text=label_text, anchor="w")
     label.grid(row=i, column=0, padx=10, pady=5, sticky="w")
-    entry = tk.Entry(root, width=30)
+    entry = tk.Entry(root, width=15)
     entry.grid(row=i, column=1, padx=10, pady=5)
     entries.append(entry)
 
 submit_btn = tk.Button(root, text="Submit", command=submit)
 submit_btn.grid(row=len(labels), column=0, columnspan=2, pady=15)
+margin_label_down = tk.Label(root, text="", font=("Arial", 12, "bold"))
+margin_label_down.grid(row=len(labels) + 1, column=0, columnspan=2, pady=5)
+
+margin_label_up = tk.Label(root, text="", font=("Arial", 12, "bold"))
+margin_label_up.grid(row=len(labels) + 2, column=0, columnspan=2, pady=5)
+
 
 root.mainloop()
 
