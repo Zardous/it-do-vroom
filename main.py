@@ -4,12 +4,10 @@ from traceback import print_tb
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tempcharlotte import downlinkdatarate
-
 # Goal: use the link equation in decibel form so Eb/No = sum of all gains and losses
 # for each configuration calculate the margin
 # note: all losses are maximal losses based on the worst expected conditions
-#Assumptions: T0=290K
+#Assumptions: T0=290K, G/T=G-T0(1-F_loss) [dB]
 
 #constants
 k_b = 1.381*10e-23
@@ -129,6 +127,25 @@ def link(values, eta_ant, c, k_b, min_elev):
         - pointing_loss_val
     )
     return EbNo_downlink
+def payloaddatarate(values, planet_data):
+    rad_planet = planet_data[values[-1]]['mean_radius']
+    h_orbit = values[8]
+    gravparam = planet_data[values[-1]]['gravitational_parameter']
+    swathwidth = values[12]
+    pixelsize = values[13]
+    bitsperpixel = values[14]
+
+    v_orb = np.sqrt(gravparam / (rad_planet + h_orbit))
+    v_ground = v_orb * rad_planet / (rad_planet +h_orbit)
+    swath_time = h_orbit * np.tan(pixelsize) / v_ground
+    pixelsperswath = swathwidth / pixelsize
+    pixelrate = pixelsperswath / swath_time
+    datarate = pixelrate * bitsperpixel
+    return datarate
+def downlinkdatarate(values, payloaddatarate, downlinktime):
+    dutycycle = values[15]
+    downlinkdatarate = 24 * 60 * 60 * dutycycle / 100 * payloaddatarate / (downlinktime * 60 * 60)
+    return downlinkdatarate
 
 #GUI
 def submit():
