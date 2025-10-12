@@ -69,11 +69,11 @@ planet_data = {
     }
 }
 exercise_data = {
-    'Case 1': [150, 400, 0.8, 0.7, 2.2, 0.920833, 1, 15, 820, 0, 0.12, 100, 45, 0.01, 32, 100, 0.5, 10.5, 2, 'earth'],
-    'Case 2': [100, 400, 0.8, 0.7, 2.2, 0.920833, 4.2, 15, 100, 0, 0.1, 10, 45, 0.05, 8, 75, 8, 10.5, 2, 'moon'],
-    'Case 3': [10, 400, 0.8, 0.7, 8.4, 0.851136, 0.1, 35, 1000, 5, 1, 0.01, 10, 0.2, 8, 5, 18, 10.5,2, 'mars'],
-    'Case 4': [100, 1000, 0.8, 0.7, 8.4, 0.851136, 2, 35, 400, 20, 0.1, 1, 10, 0.1, 8, 10, 18, 10.5,2, 'mars'],
-    'Case 5': [200, 1000, 0.8, 0.7, 8.5, 0.851136, 1.6, 35, 1000, 10, 0.1, 1, 10, 0.3, 8, 25, 12, 10.5,2, 'venus']
+    'Case 1': [150, 400, 0.8, 0.7, 2.2, 0.920833, 1, 15, 820, 0, 0.12, 100, 45, 0.01, 32, 100, 0.5, 10.5, 0, 'earth'],
+    'Case 2': [100, 400, 0.8, 0.7, 2.2, 0.920833, 4.2, 15, 100, 0, 0.1, 10, 45, 0.05, 8, 75, 8, 10.5, 0, 'moon'],
+    'Case 3': [10, 400, 0.8, 0.7, 8.4, 0.851136, 0.1, 35, 1000, 5, 1, 0.01, 10, 0.2, 8, 5, 18, 10.5,1, 'mars'],
+    'Case 4': [100, 1000, 0.8, 0.7, 8.4, 0.851136, 2, 35, 400, 20, 0.1, 1, 10, 0.1, 8, 10, 18, 10.5,1, 'mars'],
+    'Case 5': [200, 1000, 0.8, 0.7, 8.5, 0.851136, 1.6, 35, 1000, 10, 0.1, 1, 10, 0.3, 8, 25, 12, 10.5,1, 'venus']
 }
 
 # formulas
@@ -94,11 +94,11 @@ def loss_space(values, f, c, planet_data, min_elev, typ):
         l = np.pi / 2 - min_elev - eta
         d = Re * (np.sin(l) / np.sin(eta))
     else:
-        if typ == 2:
+        if typ == 1:
             d_e = planet_data[values[-1]]['max_distance_to_earth']
             d_s = planet_data[values[-1]]['max_distance_to_sun']
             d = np.sqrt(d_e ** 2 + d_s ** 2 - 2 * d_e * d_s * np.cos(values[9]))
-        elif typ == 1:
+        else:
             d = planet_data[values[-1]]['max_distance_to_earth']
     loss_space = 20 * np.log10((4 * np.pi * d * f) / c)
     return -loss_space
@@ -307,7 +307,7 @@ if selected_mode == "custom":
         "15. Payload duty cycle [%]",
         "16. Payload downlink time [hr]",
         "17. Required Eb/No [dB]",
-        "18. Type(max distance(1) or elongation angle(2))",
+        "18. Type(default max distance, 1 for elongation angle)",
         "19. Planet",
     ]
     entries = []
