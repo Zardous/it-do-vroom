@@ -17,6 +17,7 @@ min_elev = 10 * np.pi / 180  # rad
 EbNo_req = 10.5  # [dB], value comes from BPSK modulation for BER of 10e-6, from ADSEE lecture 4
 T_0_receiver_GS = 290
 T_0_receiver_SC = 290
+loss_pointing_gs = 0.12 #dB
 
 # Planetary characteristics database (SI units)
 
@@ -163,7 +164,7 @@ def link(values, eta_ant, c, k_b, min_elev):
             -10 * np.log10(k_b),
             loss_space(values, f_uplink, c, planet_data, min_elev,typ),
             loss_atm(f_uplink, min_elev),
-            loss_pointing(values)
+            loss_pointing_gs
     ]
     margin_downlink = sum(EbNo_downlink_values) - values[17]
     margin_uplink = sum(EbNo_uplink_values) - values[17]
