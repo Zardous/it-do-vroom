@@ -87,7 +87,7 @@ def loss_space(values, f, c, planet_data, min_elev, typ):
         l = np.pi / 2 - min_elev - eta
         d = Re * (np.sin(l) / np.sin(eta))
     elif values[-1] == "moon":
-        Re = planet_data["venus"]['mean_radius']
+        Re = planet_data["earth"]['mean_radius']
         h = planet_data["moon"]['max_distance_to_earth']
         sin_rho = Re / (Re + h)
         eta = np.arcsin(sin_rho * np.cos(min_elev))
