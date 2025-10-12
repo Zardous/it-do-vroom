@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 # Assumptions: T0=290K, G/T=G-T0(1-F_loss) [dB]
 
 # constants
-k_b = 1.381 * 10e-23
-c = 3 * 10e8
+k_b = 1.381e-23
+c = 3e8
 eta_ant = 0.55
 min_elev = 10 * np.pi / 180  # rad
 EbNo_req = 10.5  # [dB], value comes from BPSK modulation for BER of 10e-6, from ADSEE lecture 4
@@ -81,10 +81,10 @@ def loss_space(values, f, c, planet_data, min_elev, typ):
     # procedure taken from SMAD 3rd edition page 113
     if values[-1] == "earth":
         Re = planet_data["earth"]['mean_radius']
-        h = values[8] * 1000
+        h = values[8] * 1e3
         sin_rho = Re / (Re + h)
         eta = np.arcsin(sin_rho * np.cos(min_elev))
-        l = np.pi / 2 - min_elev - eta
+        l = (np.pi / 2) - min_elev - eta
         d = Re * (np.sin(l) / np.sin(eta))
     elif values[-1] == "moon":
         Re = planet_data["earth"]['mean_radius']
@@ -108,14 +108,14 @@ def eirp(values, f, D, P, c, eta_ant):
     eirp = 10 * np.log10(P) + gain - loss_tx
     return eirp
 def g_over_t(values, f, D, T_0, c, eta_ant):
-    T_sys = 10 * np.log10(T_0 * ((1 - values[3]))/values[3])
-    gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
+    T_sys = 10 * np.log10(T_0 * (1 - values[3])/values[3])
+    gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f))**2)
     g_over_t = gain - T_sys
     return g_over_t
 def loss_atm(f, min_elev):
     # linear approximation of SMAD 3rd edition book p565
-    f_GHz = f / (10 ** 9)
-    loss_atm = 0.04 + 0.002 * f_GHz / np.sin(min_elev)
+    f_GHz = f/1e9
+    loss_atm = 0.04 + 0.002 * (f_GHz / np.sin(min_elev))
     return -loss_atm
 def loss_pointing(values):
     beamwidth = 21 / (values[4] * values[6])
@@ -142,9 +142,9 @@ def downlinkdatarate(values, planet_data):
     downlinkdatarate = 24 * 60 * 60 * dutycycle / 100 * payloaddatarate / (downlinktime * 60 * 60)
     return downlinkdatarate
 def link(values, eta_ant, c, k_b, min_elev):
-    f_downlink = values[4] * 10 ** 9
-    f_uplink = values[4] * values[5] * 10 ** 9
-    uplink_datarate = values[11] * 10 ** 6
+    f_downlink = values[4]*1e9
+    f_uplink = values[4] * values[5] * 1e9
+    uplink_datarate = values[11] * 1e6
     downlink_datarate_val = downlinkdatarate(values, planet_data)
     typ = values[18]
 
