@@ -240,7 +240,7 @@ def choose_mode():
 def show_margin_popup(margin_cases):
     popup = tk.Toplevel()
     popup.title("Link Margin Results")
-    popup.geometry("1300x500")
+    popup.geometry("1300x450")
     popup.grab_set()
 
     columns = ("Case", "Link Type", "Margin", "EIRP", "G/T", "Bitrate",
@@ -287,7 +287,7 @@ selected_mode = choose_mode()
 if selected_mode == "custom":
     root = tk.Tk()
     root.title("Enter Transmission Parameters")
-    root.geometry("500x750")
+    root.geometry("500x800")
     labels = [
         "0. Transmitter power (spacecraft) [W]",
         "1. Transmitter power (ground station) [W]",
