@@ -171,118 +171,120 @@ def link(values, eta_ant, c, k_b, min_elev):
 
     return margin_downlink, margin_uplink, EbNo_downlink_values, EbNo_uplink_values
 
-# GUI
-def submit():
-    raw_values = [entry.get() for entry in entries]
-    values = []
-    for value in raw_values[:-1]:
-        if not value:
-            value = 0.0
-        values.append(float(value))
-    values.append(raw_values[-1].lower())
-
-    margin_downlink, margin_uplink, downlink_values, uplink_values = link(values, eta_ant, c, k_b, min_elev)
-
-    # Set color based on margin value
-    if margin_downlink < 0:
-        color_down = "red"
-    elif margin_downlink < 3:
-        color_down = "orange"
-    else:
-        color_down = "green"
-
-    if margin_uplink < 0:
-        color_up = "red"
-    elif margin_uplink < 3:
-        color_up = "orange"
-    else:
-        color_up = "green"
-
-    margin_label_down.config(
-        text=f"Downlink Margin: {margin_downlink:.2f} dB",
-        fg=color_down
-    )
-
-    margin_label_up.config(
-        text=f"Uplink Margin: {margin_uplink:.2f} dB",
-        fg=color_up
-    )
-
-    return values
-def choose_mode():
-    # Create a top-level window
-    window = tk.Tk()
-    window.title("Select Mode")
-    window.geometry("300x100")
-    window.resizable(False, False)
-
-    # Logic variable to store result
-    selected_mode = tk.StringVar(value="")  # default empty
-
-    def set_mode(mode):
-        selected_mode.set(mode)
-        window.quit()
-        window.destroy()
-
-    # UI elements
-    tk.Label(window, text="Choose mode:", font=("Arial", 12)).pack(pady=10)
-
-    button_frame = tk.Frame(window)
-    button_frame.pack()
-
-    tk.Button(button_frame, text="Custom", width=10, command=lambda: set_mode("custom")).pack(side="left", padx=10)
-    tk.Button(button_frame, text="Exercise", width=10, command=lambda: set_mode("exercise")).pack(side="right", padx=10)
-
-    # Start GUI loop
-    window.mainloop()
-
-    return selected_mode.get()
-def show_margin_popup(margin_cases):
-    popup = tk.Toplevel()
-    popup.title("Link Margin Results")
-    popup.geometry("1300x450")
-    popup.grab_set()
-
-    columns = ("Case", "Link Type", "Margin", "EIRP", "G/T", "Bitrate",
-               "Free Space Loss", "Atmospheric Loss", "Pointing Loss")
-
-    tree = ttk.Treeview(popup, columns=columns, show="headings", height=18)
-
-    for col in columns:
-        tree.heading(col, text=col)
-        tree.column(col, anchor="center", width=120)
-
-    for i in range(1, 6):
-        # Downlink row
-        downlink = f"{margin_cases[i][0]:.2f} dB"
-        down_data = margin_cases[i][2]
-        tree.insert("", "end", values=(
-            f"Case {i}", "Downlink", downlink,
-            f"{down_data[0]:.2f} dB", f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
-            f"{down_data[4]:.2f} dB", f"{down_data[5]:.2f} dB", f"{down_data[6]:.2f} dB"
-        ))
-
-        # Uplink row
-        uplink = f"{margin_cases[i][1]:.2f} dB"
-        up_data = margin_cases[i][3]
-        tree.insert("", "end", values=(
-            f"Case {i}", "Uplink", uplink,
-            f"{up_data[0]:.2f} dB", f"{up_data[1]:.2f} dB", f"{up_data[2]:.2f} dB",
-            f"{up_data[4]:.2f} dB", f"{up_data[5]:.2f} dB", f"{up_data[6]:.2f} dB"
-        ))
-
-        # Divider row
-        tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
-
-    tree.pack(fill="both", expand=True, padx=10, pady=10)
-
-    def on_ok():
-        popup.destroy()
-        sys.exit()
-
-    ok_button = ttk.Button(popup, text="OK", command=on_ok)
-    ok_button.pack(pady=5)
 def main():
+
+    # GUI
+    def submit():
+        raw_values = [entry.get() for entry in entries]
+        values = []
+        for value in raw_values[:-1]:
+            if not value:
+                value = 0.0
+            values.append(float(value))
+        values.append(raw_values[-1].lower())
+
+        margin_downlink, margin_uplink, downlink_values, uplink_values = link(values, eta_ant, c, k_b, min_elev)
+
+        # Set color based on margin value
+        if margin_downlink < 0:
+            color_down = "red"
+        elif margin_downlink < 3:
+            color_down = "orange"
+        else:
+            color_down = "green"
+
+        if margin_uplink < 0:
+            color_up = "red"
+        elif margin_uplink < 3:
+            color_up = "orange"
+        else:
+            color_up = "green"
+
+        margin_label_down.config(
+            text=f"Downlink Margin: {margin_downlink:.2f} dB",
+            fg=color_down
+        )
+
+        margin_label_up.config(
+            text=f"Uplink Margin: {margin_uplink:.2f} dB",
+            fg=color_up
+        )
+
+        return values
+    def choose_mode():
+        # Create a top-level window
+        window = tk.Tk()
+        window.title("Select Mode")
+        window.geometry("300x100")
+        window.resizable(False, False)
+
+        # Logic variable to store result
+        selected_mode = tk.StringVar(value="")  # default empty
+
+        def set_mode(mode):
+            selected_mode.set(mode)
+            window.quit()
+            window.destroy()
+
+        # UI elements
+        tk.Label(window, text="Choose mode:", font=("Arial", 12)).pack(pady=10)
+
+        button_frame = tk.Frame(window)
+        button_frame.pack()
+
+        tk.Button(button_frame, text="Custom", width=10, command=lambda: set_mode("custom")).pack(side="left", padx=10)
+        tk.Button(button_frame, text="Exercise", width=10, command=lambda: set_mode("exercise")).pack(side="right", padx=10)
+
+        # Start GUI loop
+        window.mainloop()
+
+        return selected_mode.get()
+    def show_margin_popup(margin_cases):
+        popup = tk.Toplevel()
+        popup.title("Link Margin Results")
+        popup.geometry("1300x450")
+        popup.grab_set()
+
+        columns = ("Case", "Link Type", "Margin", "EIRP", "G/T", "Bitrate",
+                "Free Space Loss", "Atmospheric Loss", "Pointing Loss")
+
+        tree = ttk.Treeview(popup, columns=columns, show="headings", height=18)
+
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center", width=120)
+
+        for i in range(1, 6):
+            # Downlink row
+            downlink = f"{margin_cases[i][0]:.2f} dB"
+            down_data = margin_cases[i][2]
+            tree.insert("", "end", values=(
+                f"Case {i}", "Downlink", downlink,
+                f"{down_data[0]:.2f} dB", f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
+                f"{down_data[4]:.2f} dB", f"{down_data[5]:.2f} dB", f"{down_data[6]:.2f} dB"
+            ))
+
+            # Uplink row
+            uplink = f"{margin_cases[i][1]:.2f} dB"
+            up_data = margin_cases[i][3]
+            tree.insert("", "end", values=(
+                f"Case {i}", "Uplink", uplink,
+                f"{up_data[0]:.2f} dB", f"{up_data[1]:.2f} dB", f"{up_data[2]:.2f} dB",
+                f"{up_data[4]:.2f} dB", f"{up_data[5]:.2f} dB", f"{up_data[6]:.2f} dB"
+            ))
+
+            # Divider row
+            tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
+
+        tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        def on_ok():
+            popup.destroy()
+            sys.exit()
+
+        ok_button = ttk.Button(popup, text="OK", command=on_ok)
+        ok_button.pack(pady=5)
+
     selected_mode = choose_mode()
     if selected_mode == "custom":
         root = tk.Tk()
