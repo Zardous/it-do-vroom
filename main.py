@@ -282,7 +282,6 @@ def show_margin_popup(margin_cases):
 
     ok_button = ttk.Button(popup, text="OK", command=on_ok)
     ok_button.pack(pady=5)
-
 def main():
     selected_mode = choose_mode()
     if selected_mode == "custom":
