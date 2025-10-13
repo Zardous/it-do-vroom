@@ -105,7 +105,7 @@ def loss_space(values, f, c, planet_data, min_elev, typ):
 def eirp(values, f, D, P, c, eta_ant):
     loss_tx = 10 * np.log10(values[2])
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
-    eirp = 10 * np.log10(P) + gain - loss_tx
+    eirp = 10 * np.log10(P) + gain + loss_tx
     return eirp
 def g_over_t(values, f, D, T_0, c, eta_ant):
     T_sys = 10 * np.log10(T_0 * (1 - values[3])/values[3])
@@ -164,7 +164,7 @@ def link(values, eta_ant, c, k_b, min_elev):
             -10 * np.log10(k_b),
             loss_space(values, f_uplink, c, planet_data, min_elev,typ),
             loss_atm(f_uplink, min_elev),
-            loss_pointing_gs
+            -loss_pointing_gs
     ]
     margin_downlink = sum(EbNo_downlink_values) - values[17]
     margin_uplink = sum(EbNo_uplink_values) - values[17]
