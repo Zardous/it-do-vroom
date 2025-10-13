@@ -283,57 +283,60 @@ def show_margin_popup(margin_cases):
     ok_button = ttk.Button(popup, text="OK", command=on_ok)
     ok_button.pack(pady=5)
 
-selected_mode = choose_mode()
-if selected_mode == "custom":
-    root = tk.Tk()
-    root.title("Enter Transmission Parameters")
-    root.geometry("500x800")
-    labels = [
-        "0. Transmitter power (spacecraft) [W]",
-        "1. Transmitter power (ground station) [W]",
-        "2. Loss factor transmitter [-]",
-        "3. Loss factor receiver [-]",
-        "4. Downlink frequency [GHz]",
-        "5. Turnaround ratio (uplink/downlink) [-]",
-        "6. Antenna diameter (spacecraft) [m]",
-        "7. Antenna diameter (ground station) [m]",
-        "8. Orbit altitude [km]",
-        "9. Elongation angle [deg]",
-        "10. Pointing offset angle [deg]",
-        "11. Required uplink data rate [Mbit/s]",
-        "12. Payload swath width angle [deg]",
-        "13. Payload pixel size [arcmin]",
-        "14. Payload bits per pixel [bit]",
-        "15. Payload duty cycle [%]",
-        "16. Payload downlink time [hr]",
-        "17. Required Eb/No [dB]",
-        "18. Type(default max distance, 1 for elongation angle)",
-        "19. Planet",
-    ]
-    entries = []
-    for i, label_text in enumerate(labels):
-        label = tk.Label(root, text=label_text, anchor="w")
-        label.grid(row=i, column=0, padx=10, pady=5, sticky="w")
-        entry = tk.Entry(root, width=15)
-        entry.grid(row=i, column=1, padx=10, pady=5)
-        entries.append(entry)
+def main():
+    selected_mode = choose_mode()
+    if selected_mode == "custom":
+        root = tk.Tk()
+        root.title("Enter Transmission Parameters")
+        root.geometry("500x800")
+        labels = [
+            "0. Transmitter power (spacecraft) [W]",
+            "1. Transmitter power (ground station) [W]",
+            "2. Loss factor transmitter [-]",
+            "3. Loss factor receiver [-]",
+            "4. Downlink frequency [GHz]",
+            "5. Turnaround ratio (uplink/downlink) [-]",
+            "6. Antenna diameter (spacecraft) [m]",
+            "7. Antenna diameter (ground station) [m]",
+            "8. Orbit altitude [km]",
+            "9. Elongation angle [deg]",
+            "10. Pointing offset angle [deg]",
+            "11. Required uplink data rate [Mbit/s]",
+            "12. Payload swath width angle [deg]",
+            "13. Payload pixel size [arcmin]",
+            "14. Payload bits per pixel [bit]",
+            "15. Payload duty cycle [%]",
+            "16. Payload downlink time [hr]",
+            "17. Required Eb/No [dB]",
+            "18. Type(default max distance, 1 for elongation angle)",
+            "19. Planet",
+        ]
+        entries = []
+        for i, label_text in enumerate(labels):
+            label = tk.Label(root, text=label_text, anchor="w")
+            label.grid(row=i, column=0, padx=10, pady=5, sticky="w")
+            entry = tk.Entry(root, width=15)
+            entry.grid(row=i, column=1, padx=10, pady=5)
+            entries.append(entry)
 
-    submit_btn = tk.Button(root, text="Submit", command=submit)
-    submit_btn.grid(row=len(labels), column=0, columnspan=2, pady=15)
-    margin_label_down = tk.Label(root, text="", font=("Arial", 12, "bold"))
-    margin_label_down.grid(row=len(labels) + 1, column=0, columnspan=2, pady=5)
+        submit_btn = tk.Button(root, text="Submit", command=submit)
+        submit_btn.grid(row=len(labels), column=0, columnspan=2, pady=15)
+        margin_label_down = tk.Label(root, text="", font=("Arial", 12, "bold"))
+        margin_label_down.grid(row=len(labels) + 1, column=0, columnspan=2, pady=5)
 
-    margin_label_up = tk.Label(root, text="", font=("Arial", 12, "bold"))
-    margin_label_up.grid(row=len(labels) + 2, column=0, columnspan=2, pady=5)
+        margin_label_up = tk.Label(root, text="", font=("Arial", 12, "bold"))
+        margin_label_up.grid(row=len(labels) + 2, column=0, columnspan=2, pady=5)
 
-    root.mainloop()
-elif selected_mode == "exercise":
-    margin_cases = {
-        i: link(exercise_data[f'Case {i}'], eta_ant, c, k_b, min_elev)
-        for i in range(1, 6)
-    }
-    root = tk.Tk()
-    root.withdraw()
-    show_margin_popup(margin_cases)
-    root.mainloop()
+        root.mainloop()
+    elif selected_mode == "exercise":
+        margin_cases = {
+            i: link(exercise_data[f'Case {i}'], eta_ant, c, k_b, min_elev)
+            for i in range(1, 6)
+        }
+        root = tk.Tk()
+        root.withdraw()
+        show_margin_popup(margin_cases)
+        root.mainloop()
 
+if __name__=='__main__':
+    main()
