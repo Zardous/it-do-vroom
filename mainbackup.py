@@ -105,7 +105,7 @@ def loss_space(values, f, c, planet_data, min_elev, typ):
 def eirp(values, f, D, P, c, eta_ant):
     loss_tx = 10 * np.log10(values[2])
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
-    eirp = 10 * np.log10(P) + gain - loss_tx
+    eirp = 10 * np.log10(P) + gain + loss_tx
     return eirp
 def g_over_t(values, f, D, T_0, c, eta_ant):
     T_sys = 10 * np.log10(T_0 * (1 - values[3])/values[3])
@@ -139,7 +139,7 @@ def downlinkdatarate(values, planet_data):
     payloaddatarate = pixelrate * bitsperpixel
     downlinktime = values[17]
     dutycycle = values[15]
-    downlinkdatarate = 24 * 60 * 60 * dutycycle / 100 * payloaddatarate / (downlinktime * 60 * 60)
+    downlinkdatarate = dutycycle / 100 * payloaddatarate / (downlinktime / 24)
     return downlinkdatarate
 def link(values, eta_ant, c, k_b, min_elev):
     f_downlink = values[4]*1e9
