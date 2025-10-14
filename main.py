@@ -212,7 +212,6 @@ def main():
             text=f"Uplink Margin: {margin_uplink:.2f} dB",
             fg=color_up
         )
-
         return values
     def choose_mode():
         # Create a top-level window
