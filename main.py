@@ -117,9 +117,12 @@ def loss_atm(f, min_elev):
     f_GHz = f/1e9
     loss_atm = 0.04 + 0.002 * (f_GHz / np.sin(min_elev))
     return -loss_atm
-def loss_pointing(values):
-    beamwidth = 21 / (values[4] * values[6])
-    loss_pointing = 12 * (values[10] / beamwidth) ** 2
+def loss_pointing(f,D,pointing_accuracy,mode):
+    f_GHz = f/1e9
+    half_power_beamwidth = 21 / (f_GHz * D)
+    if mode == 1:
+        pointing_accuracy=0.1*half_power_beamwidth
+    loss_pointing = 12 * (pointing_accuracy / half_power_beamwidth) ** 2
     return -loss_pointing
 def bitrate_loss(datarate):
     bitrate_loss = 10 * np.log10(datarate)
@@ -155,7 +158,7 @@ def link(values, eta_ant, c, k_b, min_elev):
             -10*np.log10(k_b),
             loss_space(values, f_downlink, c, planet_data, min_elev,typ),
             loss_atm(f_downlink, min_elev),
-            loss_pointing(values)
+            loss_pointing(f_downlink, values[6],values[10],0)
     ]
     EbNo_uplink_values = [
             eirp(values, f_uplink, values[7], values[1], c, eta_ant),
@@ -164,7 +167,7 @@ def link(values, eta_ant, c, k_b, min_elev):
             -10 * np.log10(k_b),
             loss_space(values, f_uplink, c, planet_data, min_elev,typ),
             loss_atm(f_uplink, min_elev),
-            -loss_pointing_gs
+            loss_pointing(f_uplink, values[7],0,1)
     ]
     margin_downlink = sum(EbNo_downlink_values) - values[17]
     margin_uplink = sum(EbNo_uplink_values) - values[17]
