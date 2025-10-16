@@ -15,8 +15,9 @@ c = 3e8
 eta_ant = 0.55
 min_elev = 10 * np.pi / 180  # rad
 EbNo_req = 10.5  # [dB], value comes from BPSK modulation for BER of 10e-6, from ADSEE lecture 4
-T_0_receiver_GS = 290
-T_0_receiver_SC = 290
+T_0 = 290
+T_ref_sc = 325 #K
+T_ref_gs = 60 #K
 loss_pointing_gs = 0.12 #dB
 
 # Planetary characteristics database (SI units)
@@ -107,10 +108,10 @@ def eirp(values, f, D, P, c, eta_ant):
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
     eirp = 10 * np.log10(P) + gain + loss_tx
     return eirp
-def g_over_t(values, f, D, T_0, c, eta_ant):
-    T_sys = 10 * np.log10(T_0 * (1 - values[3])/values[3])
+def g_over_t(values, f, D, T_0,T_ref, c, eta_ant):
+    T_sys = 10 * np.log10(T_ref+T_0 * (1 - values[3])/values[3])
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f))**2)
-    g_over_t = gain - T_sys
+    g_over_t = gain -T_sys
     return g_over_t
 def loss_atm(f, min_elev):
     # linear approximation of SMAD 3rd edition book p565
@@ -153,7 +154,7 @@ def link(values, eta_ant, c, k_b, min_elev):
 
     EbNo_downlink_values = [
             eirp(values, f_downlink, values[6], values[0], c, eta_ant),
-            g_over_t(values, f_downlink, values[7], T_0_receiver_GS, c, eta_ant),
+            g_over_t(values, f_downlink, values[7], T_0, T_ref_gs, c, eta_ant),
             bitrate_loss(downlink_datarate_val),
             -10*np.log10(k_b),
             loss_space(values, f_downlink, c, planet_data, min_elev,typ),
@@ -162,7 +163,7 @@ def link(values, eta_ant, c, k_b, min_elev):
     ]
     EbNo_uplink_values = [
             eirp(values, f_uplink, values[7], values[1], c, eta_ant),
-            g_over_t(values, f_uplink, values[6], T_0_receiver_SC, c, eta_ant),
+            g_over_t(values, f_uplink, values[6], T_0, T_ref_sc, c, eta_ant),
             bitrate_loss(uplink_datarate),
             -10 * np.log10(k_b),
             loss_space(values, f_uplink, c, planet_data, min_elev,typ),
