@@ -132,8 +132,7 @@ def downlinkdatarate(values, planet_data):
     pixelsize = values[13] * np.pi / 10800
     bitsperpixel = values[14]
     v_orb = np.sqrt(gravparam / (rad_planet + h_orbit))
-    v_ground = v_orb * rad_planet / (rad_planet + h_orbit)
-    swath_time = h_orbit * np.tan(pixelsize) / v_ground
+    swath_time = h_orbit * np.tan(pixelsize) / v_orb
     pixelsperswath = swathwidth / pixelsize
     pixelrate = pixelsperswath / swath_time
     payloaddatarate = pixelrate * bitsperpixel
