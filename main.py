@@ -178,58 +178,19 @@ def link(values, eta_ant, c, k_b, min_elev):
 def main():
 
     # GUI
-    def submit():
-        raw_values = [entry.get() for entry in entries]
-        values = []
-        for value in raw_values[:-1]:
-            if not value:
-                value = 0.0
-            values.append(float(value))
-        values.append(raw_values[-1].lower())
-
-        margin_downlink, margin_uplink, downlink_values, uplink_values = link(values, eta_ant, c, k_b, min_elev)
-
-        # Set color based on margin value
-        if margin_downlink < 0:
-            color_down = "red"
-        elif margin_downlink < 3:
-            color_down = "orange"
-        else:
-            color_down = "green"
-
-        if margin_uplink < 0:
-            color_up = "red"
-        elif margin_uplink < 3:
-            color_up = "orange"
-        else:
-            color_up = "green"
-
-        margin_label_down.config(
-            text=f"Downlink Margin: {margin_downlink:.2f} dB",
-            fg=color_down
-        )
-
-        margin_label_up.config(
-            text=f"Uplink Margin: {margin_uplink:.2f} dB",
-            fg=color_up
-        )
-        return values
     def choose_mode():
-        # Create a top-level window
+        """GUI to choose between Custom and Exercise modes."""
         window = tk.Tk()
         window.title("Select Mode")
         window.geometry("300x100")
         window.resizable(False, False)
 
-        # Logic variable to store result
-        selected_mode = tk.StringVar(value="")  # default empty
+        selected_mode = tk.StringVar(value="")
 
         def set_mode(mode):
             selected_mode.set(mode)
-            window.quit()
             window.destroy()
 
-        # UI elements
         tk.Label(window, text="Choose mode:", font=("Arial", 12)).pack(pady=10)
 
         button_frame = tk.Frame(window)
@@ -238,61 +199,15 @@ def main():
         tk.Button(button_frame, text="Custom", width=10, command=lambda: set_mode("custom")).pack(side="left", padx=10)
         tk.Button(button_frame, text="Exercise", width=10, command=lambda: set_mode("exercise")).pack(side="right", padx=10)
 
-        # Start GUI loop
         window.mainloop()
-
         return selected_mode.get()
-    def show_margin_popup(margin_cases):
-        popup = tk.Toplevel()
-        popup.title("Link Margin Results")
-        popup.geometry("1300x450")
-        popup.grab_set()
 
-        columns = ("Case", "Link Type", "Margin", "EIRP", "G/T", "Bitrate",
-                "Free Space Loss", "Atmospheric Loss", "Pointing Loss")
-
-        tree = ttk.Treeview(popup, columns=columns, show="headings", height=18)
-
-        for col in columns:
-            tree.heading(col, text=col)
-            tree.column(col, anchor="center", width=120)
-
-        for i in range(1, 6):
-            # Downlink row
-            downlink = f"{margin_cases[i][0]:.2f} dB"
-            down_data = margin_cases[i][2]
-            tree.insert("", "end", values=(
-                f"Case {i}", "Downlink", downlink,
-                f"{down_data[0]:.2f} dB", f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
-                f"{down_data[4]:.2f} dB", f"{down_data[5]:.2f} dB", f"{down_data[6]:.2f} dB"
-            ))
-
-            # Uplink row
-            uplink = f"{margin_cases[i][1]:.2f} dB"
-            up_data = margin_cases[i][3]
-            tree.insert("", "end", values=(
-                f"Case {i}", "Uplink", uplink,
-                f"{up_data[0]:.2f} dB", f"{up_data[1]:.2f} dB", f"{up_data[2]:.2f} dB",
-                f"{up_data[4]:.2f} dB", f"{up_data[5]:.2f} dB", f"{up_data[6]:.2f} dB"
-            ))
-
-            # Divider row
-            tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
-
-        tree.pack(fill="both", expand=True, padx=10, pady=10)
-
-        def on_ok():
-            popup.destroy()
-            sys.exit()
-
-        ok_button = ttk.Button(popup, text="OK", command=on_ok)
-        ok_button.pack(pady=5)
-
-    selected_mode = choose_mode()
-    if selected_mode == "custom":
+    def get_custom_input():
+        """GUI to collect user inputs for transmission parameters."""
         root = tk.Tk()
         root.title("Enter Transmission Parameters")
         root.geometry("500x800")
+
         labels = [
             "0. Transmitter power (spacecraft) [W]",
             "1. Transmitter power (ground station) [W]",
@@ -312,26 +227,120 @@ def main():
             "15. Payload duty cycle [%]",
             "16. Payload downlink time [hr]",
             "17. Required Eb/No [dB]",
-            "18. Type(default max distance, 1 for elongation angle)",
+            "18. Type (default max distance, 1 for elongation angle)",
             "19. Planet",
         ]
+
         entries = []
         for i, label_text in enumerate(labels):
-            label = tk.Label(root, text=label_text, anchor="w")
-            label.grid(row=i, column=0, padx=10, pady=5, sticky="w")
+            tk.Label(root, text=label_text, anchor="w").grid(row=i, column=0, padx=10, pady=5, sticky="w")
             entry = tk.Entry(root, width=15)
             entry.grid(row=i, column=1, padx=10, pady=5)
             entries.append(entry)
 
-        submit_btn = tk.Button(root, text="Submit", command=submit)
-        submit_btn.grid(row=len(labels), column=0, columnspan=2, pady=15)
-        margin_label_down = tk.Label(root, text="", font=("Arial", 12, "bold"))
-        margin_label_down.grid(row=len(labels) + 1, column=0, columnspan=2, pady=5)
+        result = []
 
-        margin_label_up = tk.Label(root, text="", font=("Arial", 12, "bold"))
-        margin_label_up.grid(row=len(labels) + 2, column=0, columnspan=2, pady=5)
+        def submit():
+            raw_values = [entry.get() for entry in entries]
+            values = []
+            for val in raw_values[:-1]:
+                val = float(val) if val else 0.0
+                values.append(val)
+            values.append(raw_values[-1].strip().lower())  # planet name
+            result.extend(values)
+            root.destroy()
 
+        tk.Button(root, text="Submit", command=submit).grid(row=len(labels), column=0, columnspan=2, pady=15)
         root.mainloop()
+        return result
+
+    def show_results_custom(data_downlink, data_uplink):
+        """Display results for custom mode in a vertical comparison table."""
+        root = tk.Tk()
+        root.title("Link Budget Results")
+
+        frame = tk.Frame(root)
+        frame.pack(padx=10, pady=10)
+
+        # Header
+        tk.Label(frame, text="", font=('Arial', 10, 'bold'), width=20).grid(row=0, column=0, sticky='w')
+        tk.Label(frame, text="Downlink", font=('Arial', 10, 'bold'), width=15).grid(row=0, column=1, sticky='w')
+        tk.Label(frame, text="Uplink", font=('Arial', 10, 'bold'), width=15).grid(row=0, column=2, sticky='w')
+
+        rows = [
+            "Margin", "Required Eb/No", "EIRP", "G/T", "Bitrate","kb constant",
+            "Free Space Loss", "Atmospheric Loss", "Pointing Loss"
+        ]
+
+        for i, label in enumerate(rows):
+            v1 = round(data_downlink[i],2) if i < len(data_downlink) else ""
+            v2 = round(data_uplink[i],2) if i < len(data_uplink) else ""
+            tk.Label(frame, text=label, anchor='w', width=20).grid(row=i+1, column=0, sticky='w')
+            tk.Label(frame, text=str(v1), anchor='w', width=15).grid(row=i+1, column=1, sticky='w')
+            tk.Label(frame, text=str(v2), anchor='w', width=15).grid(row=i+1, column=2, sticky='w')
+
+        tk.Button(root, text="Close", command=root.destroy).pack(pady=10)
+        root.mainloop()
+
+    def show_margin_popup(margin_cases):
+        popup = tk.Toplevel()
+        popup.title("Link Margin Results")
+        popup.geometry("1300x450")
+        popup.grab_set()
+
+        columns = ("Case", "Link Type","Required Eb/No", "Margin", "EIRP", "G/T", "Bitrate",
+                "Free Space Loss", "Atmospheric Loss", "Pointing Loss")
+
+        tree = ttk.Treeview(popup, columns=columns, show="headings", height=18)
+
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center", width=120)
+
+        for i in range(1, 6):
+            # Downlink row
+            downlink = f"{margin_cases[i][0]:.2f} dB"
+            down_data = margin_cases[i][2]
+            tree.insert("", "end", values=(
+                f"Case {i}", "Downlink", f"{exercise_data[f'Case {i}'][17]:.2f}", downlink,
+                f"{down_data[0]:.2f} dB" , f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
+                f"{down_data[4]:.2f} dB", f"{down_data[5]:.2f} dB", f"{down_data[6]:.2f} dB"
+            ))
+
+            # Uplink row
+            uplink = f"{margin_cases[i][1]:.2f} dB"
+            up_data = margin_cases[i][3]
+            tree.insert("", "end", values=(
+                f"Case {i}", "Uplink", f"{exercise_data[f'Case {i}'][17]:.2f}",uplink,
+                f"{up_data[0]:.2f} dB", f"{up_data[1]:.2f} dB", f"{up_data[2]:.2f} dB",
+                f"{up_data[4]:.2f} dB", f"{up_data[5]:.2f} dB", f"{up_data[6]:.2f} dB"
+            ))
+
+            # Divider row
+            tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
+
+        tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        def on_ok():
+            popup.destroy()
+            sys.exit()
+
+        ok_button = ttk.Button(popup, text="OK", command=on_ok)
+        ok_button.pack(pady=5)
+
+    selected_mode = choose_mode()
+    if selected_mode == "custom":
+        values = get_custom_input()
+        data_downlink = ([
+                        float(link(values, eta_ant, c, k_b, min_elev)[0]),
+                        float(values[17])]
+                         + link(values, eta_ant, c, k_b, min_elev)[2])
+        data_uplink= ([
+                             float(link(values, eta_ant, c, k_b, min_elev)[1]),
+                             float(values[17])]
+                         + link(values, eta_ant, c, k_b, min_elev)[3])
+        show_results_custom(data_downlink, data_uplink)
+
     elif selected_mode == "exercise":
         margin_cases = {
             i: link(exercise_data[f'Case {i}'], eta_ant, c, k_b, min_elev)
