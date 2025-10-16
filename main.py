@@ -248,7 +248,7 @@ def main():
         popup.geometry("1300x450")
         popup.grab_set()
 
-        columns = ("Case", "Link Type", "Margin", "EIRP", "G/T", "Bitrate",
+        columns = ("Case", "Link Type","Required Eb/No", "Margin", "EIRP", "G/T", "Bitrate",
                 "Free Space Loss", "Atmospheric Loss", "Pointing Loss")
 
         tree = ttk.Treeview(popup, columns=columns, show="headings", height=18)
@@ -262,8 +262,8 @@ def main():
             downlink = f"{margin_cases[i][0]:.2f} dB"
             down_data = margin_cases[i][2]
             tree.insert("", "end", values=(
-                f"Case {i}", "Downlink", downlink,
-                f"{down_data[0]:.2f} dB", f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
+                f"Case {i}", "Downlink", f"{EbNo_req:.2f}", downlink,
+                f"{down_data[0]:.2f} dB" , f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
                 f"{down_data[4]:.2f} dB", f"{down_data[5]:.2f} dB", f"{down_data[6]:.2f} dB"
             ))
 
@@ -271,13 +271,13 @@ def main():
             uplink = f"{margin_cases[i][1]:.2f} dB"
             up_data = margin_cases[i][3]
             tree.insert("", "end", values=(
-                f"Case {i}", "Uplink", uplink,
+                f"Case {i}", "Uplink", f"{EbNo_req:.2f}",uplink,
                 f"{up_data[0]:.2f} dB", f"{up_data[1]:.2f} dB", f"{up_data[2]:.2f} dB",
                 f"{up_data[4]:.2f} dB", f"{up_data[5]:.2f} dB", f"{up_data[6]:.2f} dB"
             ))
 
             # Divider row
-            tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
+            tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
 
         tree.pack(fill="both", expand=True, padx=10, pady=10)
 
