@@ -132,15 +132,15 @@ def downlinkdatarate(values, planet_data):
     rad_planet = planet_data[values[-1]]['mean_radius']
     h_orbit = values[8]
     gravparam = planet_data[values[-1]]['gravitational_parameter']
-    swathwidth = values[12]
-    pixelsize = values[13]
+    swathwidth = values[12]*np.pi/180
+    pixelsize = values[13]*np.pi/10800
     bitsperpixel = values[14]
     v_orb = np.sqrt(gravparam / (rad_planet + h_orbit))
     swath_time = h_orbit * np.tan(pixelsize) / v_orb
     pixelsperswath = swathwidth / pixelsize
     pixelrate = pixelsperswath / swath_time
     payloaddatarate = pixelrate * bitsperpixel
-    downlinktime = values[17]
+    downlinktime = values[16]
     dutycycle = values[15]
     downlinkdatarate = dutycycle / 100 * payloaddatarate / (downlinktime / 24)
     return downlinkdatarate
