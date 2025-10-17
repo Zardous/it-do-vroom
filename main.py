@@ -136,14 +136,13 @@ def downlinkdatarate(values, planet_data):
     pixelsize = values[13]
     bitsperpixel = values[14]
     v_orb = np.sqrt(gravparam / (rad_planet + h_orbit))
-    v_ground = v_orb * rad_planet / (rad_planet + h_orbit)
-    swath_time = h_orbit * np.tan(pixelsize) / v_ground
+    swath_time = h_orbit * np.tan(pixelsize) / v_orb
     pixelsperswath = swathwidth / pixelsize
     pixelrate = pixelsperswath / swath_time
     payloaddatarate = pixelrate * bitsperpixel
     downlinktime = values[17]
     dutycycle = values[15]
-    downlinkdatarate = 24 * 60 * 60 * dutycycle / 100 * payloaddatarate / (downlinktime * 60 * 60)
+    downlinkdatarate = dutycycle / 100 * payloaddatarate / (downlinktime / 24)
     return downlinkdatarate
 def link(values, eta_ant, c, k_b, min_elev):
     f_downlink = values[4]*1e9
