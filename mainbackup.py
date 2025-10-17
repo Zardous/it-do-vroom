@@ -1,13 +1,15 @@
 import tkinter as tk
 from tkinter import ttk
 import sys
+import json
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Goal: use the link equation in decibel form so Eb/No = sum of all gains and losses
 # for each configuration calculate the margin
 # note: all losses are maximal losses based on the worst expected conditions
-# Assumptions: T0=290K, G/T=G-T0(1-F_loss) [dB]
+# Assumptions: T0=290K, G/T=G-T0((1-F_loss)/F_loss) [dB]
 
 # constants
 k_b = 1.381e-23
@@ -15,8 +17,9 @@ c = 3e8
 eta_ant = 0.55
 min_elev = 10 * np.pi / 180  # rad
 EbNo_req = 10.5  # [dB], value comes from BPSK modulation for BER of 10e-6, from ADSEE lecture 4
-T_0_receiver_GS = 290
-T_0_receiver_SC = 290
+T_0 = 290
+T_ref_sc = 325 #K
+T_ref_gs = 60 #K
 loss_pointing_gs = 0.12 #dB
 
 # Planetary characteristics database (SI units)
@@ -97,7 +100,7 @@ def loss_space(values, f, c, planet_data, min_elev, typ):
         if typ == 1:
             d_e = planet_data[values[-1]]['max_distance_to_earth']
             d_s = planet_data[values[-1]]['max_distance_to_sun']
-            d = np.sqrt(d_e ** 2 + d_s ** 2 - 2 * d_e * d_s * np.cos(values[9]))
+            d = np.sqrt(d_e ** 2 + d_s ** 2 - 2 * d_e * d_s * np.cos(values[9]*np.pi/180))
         else:
             d = planet_data[values[-1]]['max_distance_to_earth']
     loss_space = 20 * np.log10((4 * np.pi * d * f) / c)
@@ -107,19 +110,22 @@ def eirp(values, f, D, P, c, eta_ant):
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f)) ** 2)
     eirp = 10 * np.log10(P) + gain + loss_tx
     return eirp
-def g_over_t(values, f, D, T_0, c, eta_ant):
-    T_sys = 10 * np.log10(T_0 * (1 - values[3])/values[3])
+def g_over_t(values, f, D, T_0,T_ref, c, eta_ant):
+    T_sys = 10 * np.log10(T_ref+T_0 * (1 - values[3])/values[3])
     gain = 10 * np.log10(eta_ant * ((np.pi * D) / (c / f))**2)
-    g_over_t = gain - T_sys
+    g_over_t = gain -T_sys
     return g_over_t
 def loss_atm(f, min_elev):
     # linear approximation of SMAD 3rd edition book p565
     f_GHz = f/1e9
     loss_atm = 0.04 + 0.002 * (f_GHz / np.sin(min_elev))
     return -loss_atm
-def loss_pointing(values):
-    beamwidth = 21 / (values[4] * values[6])
-    loss_pointing = 12 * (values[10] / beamwidth) ** 2
+def loss_pointing(f,D,pointing_accuracy,mode):
+    f_GHz = f/1e9
+    half_power_beamwidth = 21 / (f_GHz * D)
+    if mode == 1:
+        pointing_accuracy=0.1*half_power_beamwidth
+    loss_pointing = 12 * (pointing_accuracy / half_power_beamwidth) ** 2
     return -loss_pointing
 def bitrate_loss(datarate):
     bitrate_loss = 10 * np.log10(datarate)
@@ -128,17 +134,18 @@ def downlinkdatarate(values, planet_data):
     rad_planet = planet_data[values[-1]]['mean_radius']
     h_orbit = values[8]
     gravparam = planet_data[values[-1]]['gravitational_parameter']
-    swathwidth = values[12] * np.pi / 180
-    pixelsize = values[13] * np.pi / 10800
+    swathwidth = values[12]
+    pixelsize = values[13]
     bitsperpixel = values[14]
     v_orb = np.sqrt(gravparam / (rad_planet + h_orbit))
-    swath_time = h_orbit * np.tan(pixelsize) / v_orb
+    v_ground = v_orb * rad_planet / (rad_planet + h_orbit)
+    swath_time = h_orbit * np.tan(pixelsize) / v_ground
     pixelsperswath = swathwidth / pixelsize
     pixelrate = pixelsperswath / swath_time
     payloaddatarate = pixelrate * bitsperpixel
     downlinktime = values[17]
     dutycycle = values[15]
-    downlinkdatarate = dutycycle / 100 * payloaddatarate / (downlinktime / 24)
+    downlinkdatarate = 24 * 60 * 60 * dutycycle / 100 * payloaddatarate / (downlinktime * 60 * 60)
     return downlinkdatarate
 def link(values, eta_ant, c, k_b, min_elev):
     f_downlink = values[4]*1e9
@@ -149,190 +156,222 @@ def link(values, eta_ant, c, k_b, min_elev):
 
     EbNo_downlink_values = [
             eirp(values, f_downlink, values[6], values[0], c, eta_ant),
-            g_over_t(values, f_downlink, values[7], T_0_receiver_GS, c, eta_ant),
+            g_over_t(values, f_downlink, values[7], T_0, T_ref_gs, c, eta_ant),
             bitrate_loss(downlink_datarate_val),
             -10*np.log10(k_b),
             loss_space(values, f_downlink, c, planet_data, min_elev,typ),
             loss_atm(f_downlink, min_elev),
-            loss_pointing(values)
+            loss_pointing(f_downlink, values[6],values[10],0)
     ]
     EbNo_uplink_values = [
             eirp(values, f_uplink, values[7], values[1], c, eta_ant),
-            g_over_t(values, f_uplink, values[6], T_0_receiver_SC, c, eta_ant),
+            g_over_t(values, f_uplink, values[6], T_0, T_ref_sc, c, eta_ant),
             bitrate_loss(uplink_datarate),
             -10 * np.log10(k_b),
             loss_space(values, f_uplink, c, planet_data, min_elev,typ),
             loss_atm(f_uplink, min_elev),
-            loss_pointing_gs
+            loss_pointing(f_uplink, values[7],0,1)
     ]
     margin_downlink = sum(EbNo_downlink_values) - values[17]
     margin_uplink = sum(EbNo_uplink_values) - values[17]
 
     return margin_downlink, margin_uplink, EbNo_downlink_values, EbNo_uplink_values
 
-# GUI
-def submit():
-    raw_values = [entry.get() for entry in entries]
-    values = []
-    for value in raw_values[:-1]:
-        if not value:
-            value = 0.0
-        values.append(float(value))
-    values.append(raw_values[-1].lower())
+def main():
 
-    margin_downlink, margin_uplink, downlink_values, uplink_values = link(values, eta_ant, c, k_b, min_elev)
+    # GUI
+    def choose_mode():
+        """GUI to choose between Custom and Exercise modes."""
+        window = tk.Tk()
+        window.title("Select Mode")
+        window.geometry("300x100")
+        window.resizable(False, False)
 
-    # Set color based on margin value
-    if margin_downlink < 0:
-        color_down = "red"
-    elif margin_downlink < 3:
-        color_down = "orange"
-    else:
-        color_down = "green"
+        selected_mode = tk.StringVar(value="")
 
-    if margin_uplink < 0:
-        color_up = "red"
-    elif margin_uplink < 3:
-        color_up = "orange"
-    else:
-        color_up = "green"
+        def set_mode(mode):
+            selected_mode.set(mode)
+            window.destroy()
 
-    margin_label_down.config(
-        text=f"Downlink Margin: {margin_downlink:.2f} dB",
-        fg=color_down
-    )
+        tk.Label(window, text="Choose mode:", font=("Arial", 12)).pack(pady=10)
 
-    margin_label_up.config(
-        text=f"Uplink Margin: {margin_uplink:.2f} dB",
-        fg=color_up
-    )
+        button_frame = tk.Frame(window)
+        button_frame.pack()
 
-    return values
-def choose_mode():
-    # Create a top-level window
-    window = tk.Tk()
-    window.title("Select Mode")
-    window.geometry("300x100")
-    window.resizable(False, False)
+        tk.Button(button_frame, text="Custom", width=10, command=lambda: set_mode("custom")).pack(side="left", padx=10)
+        tk.Button(button_frame, text="Exercise", width=10, command=lambda: set_mode("exercise")).pack(side="right", padx=10)
 
-    # Logic variable to store result
-    selected_mode = tk.StringVar(value="")  # default empty
+        window.mainloop()
+        return selected_mode.get()
 
-    def set_mode(mode):
-        selected_mode.set(mode)
-        window.quit()
-        window.destroy()
+    def get_custom_input():
+        """GUI to collect user inputs for transmission parameters with persistent memory."""
+        root = tk.Tk()
+        root.title("Enter Transmission Parameters")
+        root.geometry("500x800")
 
-    # UI elements
-    tk.Label(window, text="Choose mode:", font=("Arial", 12)).pack(pady=10)
+        memory_file = "last_inputs.json"
 
-    button_frame = tk.Frame(window)
-    button_frame.pack()
+        # --- Load saved inputs if available ---
+        if os.path.exists(memory_file):
+            with open(memory_file, "r") as f:
+                saved_values = json.load(f)
+        else:
+            saved_values = {}
 
-    tk.Button(button_frame, text="Custom", width=10, command=lambda: set_mode("custom")).pack(side="left", padx=10)
-    tk.Button(button_frame, text="Exercise", width=10, command=lambda: set_mode("exercise")).pack(side="right", padx=10)
+        labels = [
+            "0. Transmitter power (spacecraft) [W]",
+            "1. Transmitter power (ground station) [W]",
+            "2. Loss factor transmitter [-]",
+            "3. Loss factor receiver [-]",
+            "4. Downlink frequency [GHz]",
+            "5. Turnaround ratio (uplink/downlink) [-]",
+            "6. Antenna diameter (spacecraft) [m]",
+            "7. Antenna diameter (ground station) [m]",
+            "8. Orbit altitude [km]",
+            "9. Elongation angle [deg]",
+            "10. Pointing offset angle [deg]",
+            "11. Required uplink data rate [Mbit/s]",
+            "12. Payload swath width angle [deg]",
+            "13. Payload pixel size [arcmin]",
+            "14. Payload bits per pixel [bit]",
+            "15. Payload duty cycle [%]",
+            "16. Payload downlink time [hr]",
+            "17. Required Eb/No [dB]",
+            "18. Type (default max distance, 1 for elongation angle)",
+            "19. Planet",
+        ]
 
-    # Start GUI loop
-    window.mainloop()
+        entries = []
 
-    return selected_mode.get()
-def show_margin_popup(margin_cases):
-    popup = tk.Toplevel()
-    popup.title("Link Margin Results")
-    popup.geometry("1300x450")
-    popup.grab_set()
+        # --- Build the form with prefilled values ---
+        for i, label_text in enumerate(labels):
+            tk.Label(root, text=label_text, anchor="w").grid(row=i, column=0, padx=10, pady=5, sticky="w")
+            entry = tk.Entry(root, width=15)
+            entry.grid(row=i, column=1, padx=10, pady=5)
+            # Prefill with saved value if exists
+            if str(i) in saved_values:
+                entry.insert(0, saved_values[str(i)])
+            entries.append(entry)
 
-    columns = ("Case", "Link Type", "Margin", "EIRP", "G/T", "Bitrate",
-               "Free Space Loss", "Atmospheric Loss", "Pointing Loss")
+        result = []
 
-    tree = ttk.Treeview(popup, columns=columns, show="headings", height=18)
+        def submit():
+            raw_values = [entry.get() for entry in entries]
+            values = []
+            for val in raw_values[:-1]:
+                val = float(val) if val else 0.0
+                values.append(val)
+            values.append(raw_values[-1].strip().lower())  # planet name
+            result.extend(values)
 
-    for col in columns:
-        tree.heading(col, text=col)
-        tree.column(col, anchor="center", width=120)
+            # --- Save current inputs to file ---
+            data_to_save = {str(i): entries[i].get() for i in range(len(entries))}
+            with open(memory_file, "w") as f:
+                json.dump(data_to_save, f, indent=2)
 
-    for i in range(1, 6):
-        # Downlink row
-        downlink = f"{margin_cases[i][0]:.2f} dB"
-        down_data = margin_cases[i][2]
-        tree.insert("", "end", values=(
-            f"Case {i}", "Downlink", downlink,
-            f"{down_data[0]:.2f} dB", f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
-            f"{down_data[4]:.2f} dB", f"{down_data[5]:.2f} dB", f"{down_data[6]:.2f} dB"
-        ))
+            root.destroy()
 
-        # Uplink row
-        uplink = f"{margin_cases[i][1]:.2f} dB"
-        up_data = margin_cases[i][3]
-        tree.insert("", "end", values=(
-            f"Case {i}", "Uplink", uplink,
-            f"{up_data[0]:.2f} dB", f"{up_data[1]:.2f} dB", f"{up_data[2]:.2f} dB",
-            f"{up_data[4]:.2f} dB", f"{up_data[5]:.2f} dB", f"{up_data[6]:.2f} dB"
-        ))
+        tk.Button(root, text="Submit", command=submit).grid(row=len(labels), column=0, columnspan=2, pady=15)
+        root.mainloop()
 
-        # Divider row
-        tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
+        return result
+    def show_results_custom(data_downlink, data_uplink):
+        """Display results for custom mode in a vertical comparison table."""
+        root = tk.Tk()
+        root.title("Link Budget Results")
 
-    tree.pack(fill="both", expand=True, padx=10, pady=10)
+        frame = tk.Frame(root)
+        frame.pack(padx=10, pady=10)
 
-    def on_ok():
-        popup.destroy()
-        sys.exit()
+        # Header
+        tk.Label(frame, text="", font=('Arial', 10, 'bold'), width=20).grid(row=0, column=0, sticky='w')
+        tk.Label(frame, text="Downlink", font=('Arial', 10, 'bold'), width=15).grid(row=0, column=1, sticky='w')
+        tk.Label(frame, text="Uplink", font=('Arial', 10, 'bold'), width=15).grid(row=0, column=2, sticky='w')
 
-    ok_button = ttk.Button(popup, text="OK", command=on_ok)
-    ok_button.pack(pady=5)
+        rows = [
+            "Margin", "Required Eb/No", "EIRP", "G/T", "Bitrate","kb constant",
+            "Free Space Loss", "Atmospheric Loss", "Pointing Loss"
+        ]
 
-selected_mode = choose_mode()
-if selected_mode == "custom":
-    root = tk.Tk()
-    root.title("Enter Transmission Parameters")
-    root.geometry("500x800")
-    labels = [
-        "0. Transmitter power (spacecraft) [W]",
-        "1. Transmitter power (ground station) [W]",
-        "2. Loss factor transmitter [-]",
-        "3. Loss factor receiver [-]",
-        "4. Downlink frequency [GHz]",
-        "5. Turnaround ratio (uplink/downlink) [-]",
-        "6. Antenna diameter (spacecraft) [m]",
-        "7. Antenna diameter (ground station) [m]",
-        "8. Orbit altitude [km]",
-        "9. Elongation angle [deg]",
-        "10. Pointing offset angle [deg]",
-        "11. Required uplink data rate [Mbit/s]",
-        "12. Payload swath width angle [deg]",
-        "13. Payload pixel size [arcmin]",
-        "14. Payload bits per pixel [bit]",
-        "15. Payload duty cycle [%]",
-        "16. Payload downlink time [hr]",
-        "17. Required Eb/No [dB]",
-        "18. Type(default max distance, 1 for elongation angle)",
-        "19. Planet",
-    ]
-    entries = []
-    for i, label_text in enumerate(labels):
-        label = tk.Label(root, text=label_text, anchor="w")
-        label.grid(row=i, column=0, padx=10, pady=5, sticky="w")
-        entry = tk.Entry(root, width=15)
-        entry.grid(row=i, column=1, padx=10, pady=5)
-        entries.append(entry)
+        for i, label in enumerate(rows):
+            v1 = round(data_downlink[i],2) if i < len(data_downlink) else ""
+            v2 = round(data_uplink[i],2) if i < len(data_uplink) else ""
+            tk.Label(frame, text=label, anchor='w', width=20).grid(row=i+1, column=0, sticky='w')
+            tk.Label(frame, text=str(v1), anchor='w', width=15).grid(row=i+1, column=1, sticky='w')
+            tk.Label(frame, text=str(v2), anchor='w', width=15).grid(row=i+1, column=2, sticky='w')
 
-    submit_btn = tk.Button(root, text="Submit", command=submit)
-    submit_btn.grid(row=len(labels), column=0, columnspan=2, pady=15)
-    margin_label_down = tk.Label(root, text="", font=("Arial", 12, "bold"))
-    margin_label_down.grid(row=len(labels) + 1, column=0, columnspan=2, pady=5)
+        tk.Button(root, text="Close", command=root.destroy).pack(pady=10)
+        root.mainloop()
 
-    margin_label_up = tk.Label(root, text="", font=("Arial", 12, "bold"))
-    margin_label_up.grid(row=len(labels) + 2, column=0, columnspan=2, pady=5)
+    def show_margin_popup(margin_cases):
+        popup = tk.Toplevel()
+        popup.title("Link Margin Results")
+        popup.geometry("1300x450")
+        popup.grab_set()
 
-    root.mainloop()
-elif selected_mode == "exercise":
-    margin_cases = {
-        i: link(exercise_data[f'Case {i}'], eta_ant, c, k_b, min_elev)
-        for i in range(1, 6)
-    }
-    root = tk.Tk()
-    root.withdraw()
-    show_margin_popup(margin_cases)
-    root.mainloop()
+        columns = ("Case", "Link Type","Required Eb/No", "Margin", "EIRP", "G/T", "Bitrate",
+                "Free Space Loss", "Atmospheric Loss", "Pointing Loss")
 
+        tree = ttk.Treeview(popup, columns=columns, show="headings", height=18)
+
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center", width=120)
+
+        for i in range(1, 6):
+            # Downlink row
+            downlink = f"{margin_cases[i][0]:.2f} dB"
+            down_data = margin_cases[i][2]
+            tree.insert("", "end", values=(
+                f"Case {i}", "Downlink", f"{exercise_data[f'Case {i}'][17]:.2f}", downlink,
+                f"{down_data[0]:.2f} dB" , f"{down_data[1]:.2f} dB", f"{down_data[2]:.2f} dB",
+                f"{down_data[4]:.2f} dB", f"{down_data[5]:.2f} dB", f"{down_data[6]:.2f} dB"
+            ))
+
+            # Uplink row
+            uplink = f"{margin_cases[i][1]:.2f} dB"
+            up_data = margin_cases[i][3]
+            tree.insert("", "end", values=(
+                f"Case {i}", "Uplink", f"{exercise_data[f'Case {i}'][17]:.2f}",uplink,
+                f"{up_data[0]:.2f} dB", f"{up_data[1]:.2f} dB", f"{up_data[2]:.2f} dB",
+                f"{up_data[4]:.2f} dB", f"{up_data[5]:.2f} dB", f"{up_data[6]:.2f} dB"
+            ))
+
+            # Divider row
+            tree.insert("", "end", values=("────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────"))
+
+        tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        def on_ok():
+            popup.destroy()
+            sys.exit()
+
+        ok_button = ttk.Button(popup, text="OK", command=on_ok)
+        ok_button.pack(pady=5)
+
+    selected_mode = choose_mode()
+    if selected_mode == "custom":
+        values = get_custom_input()
+        data_downlink = ([
+                        float(link(values, eta_ant, c, k_b, min_elev)[0]),
+                        float(values[17])]
+                         + link(values, eta_ant, c, k_b, min_elev)[2])
+        data_uplink= ([
+                             float(link(values, eta_ant, c, k_b, min_elev)[1]),
+                             float(values[17])]
+                         + link(values, eta_ant, c, k_b, min_elev)[3])
+        show_results_custom(data_downlink, data_uplink)
+
+    elif selected_mode == "exercise":
+        margin_cases = {
+            i: link(exercise_data[f'Case {i}'], eta_ant, c, k_b, min_elev)
+            for i in range(1, 6)
+        }
+        root = tk.Tk()
+        root.withdraw()
+        show_margin_popup(margin_cases)
+        root.mainloop()
+
+if __name__=='__main__':
+    main()

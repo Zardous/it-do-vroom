@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 import sys
+import json
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -202,10 +204,19 @@ def main():
         return selected_mode.get()
 
     def get_custom_input():
-        """GUI to collect user inputs for transmission parameters."""
+        """GUI to collect user inputs for transmission parameters with persistent memory."""
         root = tk.Tk()
         root.title("Enter Transmission Parameters")
         root.geometry("500x800")
+
+        memory_file = "last_inputs.json"
+
+        # --- Load saved inputs if available ---
+        if os.path.exists(memory_file):
+            with open(memory_file, "r") as f:
+                saved_values = json.load(f)
+        else:
+            saved_values = {}
 
         labels = [
             "0. Transmitter power (spacecraft) [W]",
@@ -231,10 +242,15 @@ def main():
         ]
 
         entries = []
+
+        # --- Build the form with prefilled values ---
         for i, label_text in enumerate(labels):
             tk.Label(root, text=label_text, anchor="w").grid(row=i, column=0, padx=10, pady=5, sticky="w")
             entry = tk.Entry(root, width=15)
             entry.grid(row=i, column=1, padx=10, pady=5)
+            # Prefill with saved value if exists
+            if str(i) in saved_values:
+                entry.insert(0, saved_values[str(i)])
             entries.append(entry)
 
         result = []
@@ -247,40 +263,90 @@ def main():
                 values.append(val)
             values.append(raw_values[-1].strip().lower())  # planet name
             result.extend(values)
+
+            # --- Save current inputs to file ---
+            data_to_save = {str(i): entries[i].get() for i in range(len(entries))}
+            with open(memory_file, "w") as f:
+                json.dump(data_to_save, f, indent=2)
+
             root.destroy()
 
         tk.Button(root, text="Submit", command=submit).grid(row=len(labels), column=0, columnspan=2, pady=15)
         root.mainloop()
+
         return result
 
+    import tkinter as tk
+    from tkinter import ttk
+
     def show_results_custom(data_downlink, data_uplink):
-        """Display results for custom mode in a vertical comparison table."""
+        """Display results for custom mode in a table with horizontal and vertical separators."""
         root = tk.Tk()
         root.title("Link Budget Results")
 
         frame = tk.Frame(root)
         frame.pack(padx=10, pady=10)
 
-        # Header
-        tk.Label(frame, text="", font=('Arial', 10, 'bold'), width=20).grid(row=0, column=0, sticky='w')
-        tk.Label(frame, text="Downlink", font=('Arial', 10, 'bold'), width=15).grid(row=0, column=1, sticky='w')
-        tk.Label(frame, text="Uplink", font=('Arial', 10, 'bold'), width=15).grid(row=0, column=2, sticky='w')
+        # Table headers
+        headers = ["Parameter", "Downlink", "Uplink"]
+        for j, text in enumerate(headers):
+            tk.Label(
+                frame,
+                text=text,
+                font=('Arial', 10, 'bold'),
+                width=18,
+                anchor='center'
+            ).grid(row=0, column=j * 2, sticky='nsew', padx=1, pady=2)
+
+            # Add vertical separator between columns (except last)
+            if j < len(headers) - 1:
+                ttk.Separator(frame, orient='vertical').grid(row=0, column=j * 2 + 1, rowspan=999, sticky='ns', padx=2)
+
+        # Horizontal separator below headers
+        ttk.Separator(frame, orient='horizontal').grid(row=1, column=0, columnspan=5, sticky='ew', pady=2)
 
         rows = [
-            "Margin", "Required Eb/No", "EIRP", "G/T", "Bitrate","kb constant",
+            "Margin", "Required Eb/No", "EIRP", "G/T", "Bitrate", "kb constant",
             "Free Space Loss", "Atmospheric Loss", "Pointing Loss"
         ]
 
+        def color_for_margin(value):
+            """Return color for margin value."""
+            if not isinstance(value, (int, float)):
+                return "black"
+            if value < 0:
+                return "red"
+            elif value < 3:
+                return "orange"
+            else:
+                return "green"
+
+        # Add rows
         for i, label in enumerate(rows):
-            v1 = round(data_downlink[i],2) if i < len(data_downlink) else ""
-            v2 = round(data_uplink[i],2) if i < len(data_uplink) else ""
-            tk.Label(frame, text=label, anchor='w', width=20).grid(row=i+1, column=0, sticky='w')
-            tk.Label(frame, text=str(v1), anchor='w', width=15).grid(row=i+1, column=1, sticky='w')
-            tk.Label(frame, text=str(v2), anchor='w', width=15).grid(row=i+1, column=2, sticky='w')
+            row_index = 2 + i * 2  # Leave space for horizontal separators
+            v1 = round(data_downlink[i], 2) if i < len(data_downlink) else ""
+            v2 = round(data_uplink[i], 2) if i < len(data_uplink) else ""
+
+            # Parameter name
+            tk.Label(frame, text=label, width=18, anchor='center').grid(row=row_index, column=0, sticky='nsew', padx=1,
+                                                                        pady=2)
+
+            # Downlink value
+            color1 = color_for_margin(v1) if label.lower() == "margin" else "black"
+            tk.Label(frame, text=str(v1), width=18, anchor='center', fg=color1).grid(row=row_index, column=2,
+                                                                                     sticky='nsew', padx=1, pady=2)
+
+            # Uplink value
+            color2 = color_for_margin(v2) if label.lower() == "margin" else "black"
+            tk.Label(frame, text=str(v2), width=18, anchor='center', fg=color2).grid(row=row_index, column=4,
+                                                                                     sticky='nsew', padx=1, pady=2)
+
+            # Horizontal separator below each row
+            ttk.Separator(frame, orient='horizontal').grid(row=row_index + 1, column=0, columnspan=5, sticky='ew',
+                                                           pady=1)
 
         tk.Button(root, text="Close", command=root.destroy).pack(pady=10)
         root.mainloop()
-
     def show_margin_popup(margin_cases):
         popup = tk.Toplevel()
         popup.title("Link Margin Results")
