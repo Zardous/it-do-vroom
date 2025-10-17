@@ -116,9 +116,29 @@ def g_over_t(values, f, D, T_0,T_ref, c, eta_ant):
     g_over_t = gain -T_sys
     return g_over_t
 def loss_atm(f, min_elev):
-    # linear approximation of SMAD 3rd edition book p565
+    # Excel 6th order polynomial regression of zenith attenuation vs frequency graph
+    #from slides separate for 1<f<20 GHz and 20<f<50 GHz
     f_GHz = f/1e9
-    loss_atm = 0.04 + 0.002 * (f_GHz / np.sin(min_elev))
+    if f_GHz < 20:
+        loss_atm = (
+                4e-08 * f_GHz ** 6
+                - 1e-06 * f_GHz ** 5
+                + 3e-06 * f_GHz ** 4
+                + 0.0002 * f_GHz ** 3
+                - 0.0022 * f_GHz ** 2
+                + 0.0101 * f_GHz
+                + 0.0218
+        )/np.sin(min_elev)
+    elif 20 <= f_GHz <= 50:
+        loss_atm = (
+                -1e-07 * f_GHz ** 6
+                + 3e-05 * f_GHz ** 5
+                - 0.0028 * f_GHz ** 4
+                + 0.1295 * f_GHz ** 3
+                - 3.3248 * f_GHz ** 2
+                + 44.418 * f_GHz
+                - 240.77
+        )/np.sin(min_elev)
     return -loss_atm
 def loss_pointing(f,D,pointing_accuracy,mode):
     f_GHz = f/1e9
