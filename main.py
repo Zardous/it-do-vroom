@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # Goal: use the link equation in decibel form so Eb/No = sum of all gains and losses
 # for each configuration calculate the margin
-# note: all losses are maximal losses based on the worst expected conditionss
+# note: all losses are maximal losses based on the worst expected conditions
 # Assumptions: T0=290K, G/T=G-T0((1-F_loss)/F_loss) [dB]
 
 # constants
