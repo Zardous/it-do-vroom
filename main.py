@@ -17,10 +17,10 @@ c = 3e8
 eta_ant = 0.55
 min_elev = 10 * np.pi / 180  # rad
 EbNo_req = 10.5  # [dB], value comes from BPSK modulation for BER of 10e-6, from ADSEE lecture 4
-T_0 = 290
-T_ref_sc = 325 #K
-T_ref_gs = 60 #K
 loss_pointing_gs = 0.12 #dB
+T_0 = 290  # K
+T_ref_sc = 325  # K
+T_ref_gs = 60  # K
 
 # Planetary characteristics database (SI units)
 
@@ -116,30 +116,22 @@ def g_over_t(values, f, D, T_0,T_ref, c, eta_ant):
     g_over_t = gain -T_sys
     return g_over_t
 def loss_atm(f, min_elev):
-    # Excel 6th order polynomial regression of zenith attenuation vs frequency graph
-    #from slides separate for 1<f<20 GHz and 20<f<50 GHz
+    Atmospheric_loss_data = [
+        (1, 0.03), (2, 0.035), (3, 0.0375), (4, 0.04), (5, 0.0415),
+        (6, 0.0425), (7, 0.045), (8, 0.0475), (9, 0.05), (10, 0.055),
+        (12, 0.06), (14, 0.07), (16, 0.09), (18, 0.15), (20, 0.3),
+        (22, 0.5), (25, 0.3), (30, 0.25), (35, 0.3), (40, 0.4),
+        (45, 0.7), (50, 2.0)
+    ]
+    x_vals, y_vals = zip(*Atmospheric_loss_data)
+    x_array = np.array(x_vals)
+    y_array = np.array(y_vals)
+
     f_GHz = f/1e9
-    if f_GHz < 20:
-        loss_atm = (
-                4e-08 * f_GHz ** 6
-                - 1e-06 * f_GHz ** 5
-                + 3e-06 * f_GHz ** 4
-                + 0.0002 * f_GHz ** 3
-                - 0.0022 * f_GHz ** 2
-                + 0.0101 * f_GHz
-                + 0.0218
-        )/np.sin(min_elev)
-    elif 20 <= f_GHz <= 50:
-        loss_atm = (
-                -1e-07 * f_GHz ** 6
-                + 3e-05 * f_GHz ** 5
-                - 0.0028 * f_GHz ** 4
-                + 0.1295 * f_GHz ** 3
-                - 3.3248 * f_GHz ** 2
-                + 44.418 * f_GHz
-                - 240.77
-        )/np.sin(min_elev)
+
+    loss_atm = np.interp(f_GHz, x_array, y_array) / np.sin(min_elev)
     return -loss_atm
+
 def loss_pointing(f,D,pointing_accuracy,mode):
     f_GHz = f/1e9
     half_power_beamwidth = 21 / (f_GHz * D)
