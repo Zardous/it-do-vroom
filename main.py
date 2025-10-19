@@ -98,9 +98,9 @@ def loss_space(values, f, c, planet_data, min_elev, typ):
         d = Re * (np.sin(l) / np.sin(eta))
     else:
         if typ == 1:
-            d_e = planet_data[values[-1]]['max_distance_to_earth']
+            d_e = planet_data['earth']['max_distance_to_sun']
             d_s = planet_data[values[-1]]['max_distance_to_sun']
-            d = np.sqrt(d_e ** 2 + d_s ** 2 - 2 * d_e * d_s * np.cos(values[9]*np.pi/180))
+            d = np.sqrt(d_e ** 2 + d_s ** 2 - (2 * d_e * d_s * np.cos(values[9]*np.pi/180)))
         else:
             d = planet_data[values[-1]]['max_distance_to_earth']
     loss_space = 20 * np.log10((4 * np.pi * d * f) / c)
