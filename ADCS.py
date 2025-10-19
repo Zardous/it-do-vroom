@@ -19,7 +19,7 @@ class Satellite:
 
     def run(self):
         # manoeuvring requirements
-        self.slew_to_rest()
+        self.slew_manoeuvre()
         self.thrust_for_disturbance_counteract()
         self.get_thruster_type(max(self.slew_thrust_to_rest, self.disturbance_counteract_thrust))
 
@@ -39,15 +39,6 @@ class Satellite:
         self.max_undamped_drift = (self.orbital_period/2)**2 * self.max_ampl_disturbance_torque / (2 * self.inertia * pi**2) * 180/pi
         return self.max_undamped_drift
 
-    def get_min_h_for_gyro_stiffness_for_momentum_wheel(self):
-        '''
-        Returns the minimum momentum a wheel needs to have to neutralise periodic disturbance torques to within the allowed range
-        '''
-        raise SystemError(f'This is not part of the task') 
-        self.min_h = self.max_ampl_disturbance_torque * self.orbital_period / (self.pointing_knowledge_degrees*pi/180 * 4) # kg m² / s
-        self.min_omega = self.min_h / self.wheel_inertia
-        return self.min_h
-    
     def get_max_h_in_periodic_disturbance_for_reaction_wheel(self):
         '''
         Returns the maximum momentum a reaction wheel will have in counteracting the periodic disturbance torque
@@ -56,15 +47,15 @@ class Satellite:
         return self.h_disturb
     
     def define_wheel(self, angular_momentum1, angular_momentum2):
-        inertia1 = angular_momentum1 / (self.max_rpm/60*2*pi) # kg m²
+        inertia1 = angular_momentum1 / (self.max_rpm/60*2*pi) * (1+MF) # kg m²
         wheel_dia1 = (32*inertia1/(steel_density*pi*thickness_ratio))**(1/5) # m
         wheel_mass1 = 8 * inertia1 / wheel_dia1**2 # kg
     
-        inertia2 = angular_momentum2 / (self.max_rpm/60*2*pi) # kg m²
+        inertia2 = angular_momentum2 / (self.max_rpm/60*2*pi) * (1+MF)  # kg m²
         wheel_dia2 = (32*inertia2/(steel_density*pi*thickness_ratio))**(1/5) # m
         wheel_mass2 = 8 * inertia2 / wheel_dia2**2 # kg
 
-        if wheel_mass2<=wheel_mass1*5:
+        if wheel_mass2<=wheel_mass1*5 and False:
             print(f'Reaction wheel can reasonably be used for manoeuvring requirement ({wheel_mass2:.3g}kg vs {wheel_mass1:.3g}kg) (not strictly the task)')
             self.wheel_inertia = inertia2
             self.wheel_dia = wheel_dia2
@@ -74,26 +65,28 @@ class Satellite:
             self.wheel_inertia = inertia1
             self.wheel_dia = wheel_dia1
             self.wheel_mass = wheel_mass1
-        print(f'Wheel has diameter {self.wheel_dia:.3g} m and weighs {self.wheel_mass:.3g} kg.')
+        print(f'{angular_momentum1:.3g}, {self.wheel_inertia:.3g}')
+        print(f'Wheel has diameter {self.wheel_dia*100:.3g} cm and weighs {self.wheel_mass:.3g} kg.')
 
-    def slew_to_rest(self):
+    def slew_manoeuvre(self):
         '''
         Returns the torque needed to satisfy slew requirements, ending in standstill
         '''
-        self.slew_torque_to_rest = 4 * self.inertia * self.manoeuvre_degrees / self.manoeuvre_secs**2 # N m
-        self.slew_thrust_to_rest = self.slew_torque_to_rest / self.thrust_moment_arm
+        self.slew_torque_to_rest = 4 * self.inertia * self.manoeuvre_degrees / self.manoeuvre_secs**2 * (1+MF)  # N m
+        print(f'slew_torque_to_rest: {self.slew_torque_to_rest:.3g}')
+        self.slew_thrust_to_rest = self.slew_torque_to_rest / (self.thrust_moment_arm*2)
         self.slew_h_to_rest = self.slew_torque_to_rest * self.manoeuvre_secs
         return self.slew_torque_to_rest
 
-    def thrust_for_wheel_dump(self, h, time):
-        '''
-        Returns thrust to dump momentum h in 'time' seconds
-        '''
-        F = h/(time*self.thrust_moment_arm) # N
-        return F
+    # def thrust_for_wheel_dump(self, h, time):
+    #     '''
+    #     Returns thrust to dump momentum h in 'time' seconds
+    #     '''
+    #     F = h/(time*self.thrust_moment_arm) # N
+    #     return F
     
     def thrust_for_disturbance_counteract(self):
-        self.disturbance_counteract_thrust = self.max_ampl_disturbance_torque * (1+MF) / self.thrust_moment_arm
+        self.disturbance_counteract_thrust = self.max_ampl_disturbance_torque * (1+MF) / (self.thrust_moment_arm*2)
         return self.disturbance_counteract_thrust
 
     def get_thruster_type(self, max_force):
@@ -119,7 +112,7 @@ theos = Satellite(inertia=200,
                 planet='earth')
 theos.run()
 
-print('\nChang e-4')
+print("\nChang'e-4")
 change = Satellite(inertia=100, 
                 max_ampl_disturbance_torque=1e-4,
                 thrust_moment_arm=1,
@@ -130,7 +123,7 @@ change = Satellite(inertia=100,
                 planet='moon')
 change.run()
 
-print('\nMarco')
+print('\nMarCO')
 marco = Satellite(inertia=1e-2, 
                 max_ampl_disturbance_torque=1e-7,
                 thrust_moment_arm=0.05,
